@@ -13,9 +13,13 @@ class WarehouseConfigurator:
     Рассчитывает базовые CAPEX и OPEX для склада, включая затраты на помещение и оборудование.
     """
     def __init__(self, ownership_type: str, rent_rate_sqm_year: float, purchase_cost: float, lat: float, lon: float):
+        # Нормализуем тип владения: POKUPKA_BTS -> POKUPKA
+        if ownership_type == "POKUPKA_BTS":
+            ownership_type = "POKUPKA"
+
         if ownership_type not in {"ARENDA", "POKUPKA"}:
-            raise ValueError("Неверный тип владения: должен быть 'ARENDA' или 'POKUPKA'")
-        
+            raise ValueError("Неверный тип владения: должен быть 'ARENDA', 'POKUPKA' или 'POKUPKA_BTS'")
+
         self.ownership_type = ownership_type
         self.rent_rate_sqm_year = rent_rate_sqm_year
         self.purchase_cost = purchase_cost

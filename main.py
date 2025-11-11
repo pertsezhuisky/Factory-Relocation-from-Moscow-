@@ -23,7 +23,7 @@ def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: 
     print(f"\n{'='*80}\n[Шаг 6] ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА ДЛЯ ОПТИМАЛЬНОЙ ЛОКАЦИИ: '{location_data['location_name']}'\n{'='*80}")
     print(f"Выбранная локация: {location_data['location_name']}")
     print(f"Тип владения: {'Аренда' if location_data['type'] == 'ARENDA' else 'Покупка/BTS'}")
-    print(f"Предложенная площадь: {location_data['area_offered_sqm']} м²")
+    print(f"Предложенная площадь: {location_data['area_offered_sqm']} кв.м")
     print(f"Координаты: {location_data['lat']}, {location_data['lon']}")
     print(f"\nФинансовые показатели (Сценарий 1 - без смягчения):")
     print(f"  - Начальный CAPEX (здание, оборудование, GPP/GDP, модификации): {location_data['total_initial_capex']:,.0f} руб.")

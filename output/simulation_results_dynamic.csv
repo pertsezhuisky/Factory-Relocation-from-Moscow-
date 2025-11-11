@@ -1,5 +1,5 @@
 Location_Name;Scenario_Name;Staff_Required;Achieved_Throughput_Monthly;Avg_Cycle_Time_Min;Total_Annual_OPEX_RUB;Total_CAPEX_RUB;Payback_Period_Years
-Логопарк Север-2;1. Move No Mitigation;75;10000;15.0;258360399;350000000;
-Логопарк Север-2;2. Move With Compensation;85;10000;15.0;270960399;400000000;
-Логопарк Север-2;3. Move Basic Automation;75;10000;12.0;258360399;450000000;
-Логопарк Север-2;4. Move Advanced Automation;75;10000;7.5;258360399;650000000;
+PNK Чашниково BTS;1. Move No Mitigation;75;10000;15;317644372;1900000000;153.7760769558424
+PNK Чашниково BTS;2. Move With Compensation;85;10000;15;330244372;1950000000;
+PNK Чашниково BTS;3. Move Basic Automation;75;10000;12;317644372;2000000000;161.86955469036042
+PNK Чашниково BTS;4. Move Advanced Automation;75;10000;10;317644372;2200000000;178.05651015939645

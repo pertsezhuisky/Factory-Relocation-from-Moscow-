@@ -1,6 +1,6 @@
 import pandas as pd
 import math
-from typing import List
+from typing import List, Optional, Dict, Any
 import os
 
 # Импорт модулей ядра и настроек
@@ -27,12 +27,15 @@ class SimulationRunner:
         # Готовим пустой список для сбора итоговых результатов
         self.results: List[ScenarioResult] = []
 
-    def run_all_scenarios(self):
+    def run_all_scenarios(self, initial_base_finance: Optional[Dict[str, float]] = None):
         """Запускает полный цикл анализа для всех сценариев из scenarios.py."""
         print(f"\n{'='*80}\nЗАПУСК АНАЛИЗА ДЛЯ ЛОКАЦИИ: '{self.location_spec.name}'\n{'='*80}")
-        
-        # 1. Сначала рассчитываем базовые финансовые показатели, зависящие только от локации
-        base_finance = self.location_analyzer.get_base_financials()
+
+        # 1. Используем переданные базовые финансы или рассчитываем их
+        if initial_base_finance is not None:
+            base_finance = initial_base_finance
+        else:
+            base_finance = self.location_analyzer.get_base_financials()
         
         # 2. Генерируем полные данные для всех сценариев
         all_scenarios = generate_scenario_data(base_finance)
@@ -100,7 +103,7 @@ class SimulationRunner:
         self._save_summary_csv()
         print(f"\n--- Анализ для локации '{self.location_spec.name}' завершен. ---")
 
-    def calculate_roi(self, scenario_data: dict) -> float | None:
+    def calculate_roi(self, scenario_data: dict) -> Optional[float]:
         """
         Рассчитывает срок окупаемости (Payback Period) для сценария.
         Сравнивает OPEX нового склада с OPEX текущего склада в Москве.

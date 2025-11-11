@@ -1,7 +1,7 @@
 {
     "FINANCIALS": {
-        "Total_CAPEX": 1850000000,
-        "Annual_OPEX": 458817600.0
+        "Total_CAPEX": 1950000000,
+        "Annual_OPEX": 330244372.01408386
     },
     "LAYOUT": {
         "Total_Area_SQM": 17000,
@@ -24,8 +24,8 @@
     },
     "LOGISTICS": {
         "Location_Coords": [
-            55.4,
-            37.58
+            56.01,
+            37.1
         ],
         "Required_Own_Fleet_Count": 532,
         "Delivery_Flows": [

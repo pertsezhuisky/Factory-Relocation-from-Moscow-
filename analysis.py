@@ -56,7 +56,8 @@ class AvitoParserStub:
                 "type": loc['type'],
                 "area_offered_sqm": loc['area_offered_sqm'],
                 "annual_building_opex": annual_building_opex,
-                "total_initial_capex": total_initial_capex
+                "total_initial_capex": total_initial_capex,
+                "current_class": loc['current_class']
             })
 
         return scored_locations
