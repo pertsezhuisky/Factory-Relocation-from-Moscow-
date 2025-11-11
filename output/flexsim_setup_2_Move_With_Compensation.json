@@ -1,0 +1,21 @@
+{
+    "Global_Settings": {
+        "Scenario_Name": "2. Move With Compensation",
+        "location_name": "Логопарк Север-2",
+        "coordinates": {
+            "lat": 56.095,
+            "lon": 37.388
+        }
+    },
+    "Resource_Pool": {
+        "Operators": 85,
+        "Automated_Systems": []
+    },
+    "Process_Times": {
+        "Base_Efficiency_Multiplier": 1.0
+    },
+    "Throughput_Targets": {
+        "Monthly_Orders_Target": 10000,
+        "Monthly_Orders_Achieved": 10000
+    }
+}

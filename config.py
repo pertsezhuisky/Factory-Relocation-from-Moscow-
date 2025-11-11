@@ -1,42 +1,35 @@
-from dataclasses import dataclass
+# config.py
 
-# --- Базовые неизменяемые параметры ---
-INITIAL_STAFF = 100
-BASE_SALARY_RUB_MONTH = 105000
-BASE_PROCESSING_TIME_MIN = 15
-TOTAL_WAREHOUSE_AREA_SQM = 15500 + 1500
-ANNUAL_RENT_PER_SQM_RUB = 8000 # Стоимость аренды, руб/м²/год
+"""
+Глобальные статические константы и базовые настройки проекта.
+"""
 
+# --- Финансовые и HR константы ---
+INITIAL_STAFF_COUNT = 100
+OPERATOR_SALARY_RUB_MONTH = 105000
+TRANSPORT_TARIFF_RUB_PER_KM = 13.4  # Средний тариф для 18-20т фуры
+
+# --- Константы склада и локации ---
+WAREHOUSE_TOTAL_AREA_SQM = 17000
+ANNUAL_RENT_PER_SQM_RUB = 7500.0
+PURCHASE_BUILDING_COST_RUB = 1_500_000_000
+BASE_EQUIPMENT_CAPEX_RUB = 350_000_000  # Стеллажи, климат, валидация
+MAINTENANCE_COST_OF_OWNED_BUILDING_RUB_YEAR = 50_000_000
+
+# --- Симуляционные константы ---
+BASE_ORDER_PROCESSING_TIME_MIN = 15.0
 TARGET_ORDERS_MONTH = 10000
-WORKING_DAYS = 20
-DAY_LENGTH_MIN = 8 * 60
+SIMULATION_WORKING_DAYS = 20
+MINUTES_PER_WORKING_DAY = 8 * 60
 
-# --- Сценарии ---
-@dataclass
-class ScenarioParams:
-    """Хранит уникальные параметры для одного сценария."""
-    id: int
-    name: str
-    attrition_rate: float
-    capital_investment_mln_rub: float
-    automation_efficiency: float = 1.0 # Коэффициент производительности
-
-SCENARIOS = {
-    1: ScenarioParams(1, "Move No Mitigation", 0.25, 0, 1.0),
-    2: ScenarioParams(2, "Move With Compensation", 0.15, 50, 1.0),
-    3: ScenarioParams(3, "Move Basic Automation", 0.25, 100, 1.25), # 1 / 0.8 = 1.25
-    4: ScenarioParams(4, "Move Advanced Automation", 0.25, 300, 2.00),  # 1 / 0.5 = 2.0
+# --- Гео-константы для анализа ---
+KEY_GEO_POINTS = {
+    "Current_HUB": (55.858, 37.433),
+    "Airport_SVO": (55.97, 37.41),
+    "CFD_HUBs_Avg": (54.51, 36.26),
+    "Moscow_Clients_Avg": (55.75, 37.62),
 }
 
-@dataclass
-class SimulationConfig:
-    """Полная конфигурация для одного запуска симуляции."""
-    scenario: ScenarioParams
-    simulation_duration_days: int = 20
-
-    @property
-    def duration_minutes(self): return self.simulation_duration_days * DAY_LENGTH_MIN
-    @property
-    def arrival_interval(self):
-        daily_target = TARGET_ORDERS_MONTH / WORKING_DAYS
-        return DAY_LENGTH_MIN / daily_target
+# --- Настройки вывода ---
+OUTPUT_DIR = "output"
+RESULTS_CSV_FILENAME = "simulation_results_dynamic.csv"

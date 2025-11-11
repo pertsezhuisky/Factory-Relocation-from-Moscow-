@@ -1,208 +1,39 @@
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
+# main.py
 
-# Импортируем наши собственные модули
-from config import SCENARIOS, SimulationConfig
-from simulation_model import WarehouseModel
-from analysis import KpiAnalyzer
+"""
+Единственная точка входа в приложение.
+Парсит аргументы командной строки и запускает оркестратор симуляций.
+"""
+import argparse
+from core.data_model import LocationSpec
+from simulation_runner import SimulationRunner
 
-def run_full_analysis():
-    """Главная функция, запускающая весь процесс анализа."""
+def main():
+    """Главная исполняемая функция."""
     
-    all_results = []# main_simulation_runner.py
-
-import math
-import pandas as pd
-
-# Импортируем наши собственные модули
-from flexible_location_model import LocationParameters, YandexGeoAnalyzer
-from dynamic_simpy_model import DynamicWarehouseSim
-
-# --- Базовые HR и операционные константы ---
-INITIAL_STAFF_COUNT = 100
-OPERATOR_SALARY_RUB_YEAR = 105000 * 12
-
-def run_all_scenarios_for_location(location: LocationParameters):
-    """
-    Запускает симуляцию для 4-х سناريوهات, рассчитывает финансовые KPI
-    и возвращает DataFrame с результатами.
-    """
-    
-    # 1. Сначала рассчитываем базовые финансовые параметры самой локации
-    location_base_finance = location.calculate_full_finance_profile()
-    base_capex = location_base_finance["Initial CAPEX (RUB)"]
-    base_opex_location_transport = (
-        location_base_finance["Annual Location Cost (RUB)"] + 
-        location_base_finance["Annual Transport Cost Change (RUB)"]
+    parser = argparse.ArgumentParser(
+        description="Запуск комплексного анализа релокации склада для FlexSim.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter # Для красивого вывода помощи
     )
     
-    # 2. Определяем 4 обязательных сценария
-    scenarios_config = [
-        {'name': '1. Move No Mitigation', 'attrition': 0.25, 'invest_hr_rub': 0, 'invest_auto_rub': 0, 'efficiency': 1.0},
-        {'name': '2. Move With Compensation', 'attrition': 0.15, 'invest_hr_rub': 50_000_000, 'invest_auto_rub': 0, 'efficiency': 1.0},
-        {'name': '3. Move Basic Automation', 'attrition': 0.25, 'invest_hr_rub': 0, 'invest_auto_rub': 100_000_000, 'efficiency': 1.2},
-        {'name': '4. Move Advanced Automation', 'attrition': 0.25, 'invest_hr_rub': 0, 'invest_auto_rub': 300_000_000, 'efficiency': 1.5},
-    ]
-
-    all_results = []
-    baseline_annual_cost = 0 # Запомним стоимость первого сценария для расчета ROI
-
-    # 3. Цикл по каждому сценарию
-    for i, scenario in enumerate(scenarios_config):
-        print(f"\n--- Анализ сценария: {scenario['name']} ---")
-
-        # a. Готовим параметры для SimPy
-        staff_count = math.floor(INITIAL_STAFF_COUNT * (1 - scenario['attrition']))
-        
-        # b. Запускаем симуляцию
-        sim = DynamicWarehouseSim(staff_count, scenario['efficiency'])
-        sim_results = sim.run()
-        
-        # c. Рассчитываем итоговые финансовые показатели
-        total_capex = base_capex + scenario['invest_hr_rub'] + scenario['invest_auto_rub']
-        
-        opex_labor = staff_count * OPERATOR_SALARY_RUB_YEAR
-        total_annual_cost = base_opex_location_transport + opex_labor
-        
-        # d. Рассчитываем ROI/Payback Period для сценариев автоматизации
-        payback_years = float('nan') # По умолчанию NaN
-        if i == 0:
-            baseline_annual_cost = total_annual_cost
-        
-        if scenario['invest_auto_rub'] > 0:
-            annual_savings = baseline_annual_cost - total_annual_cost
-            investment_delta = scenario['invest_auto_rub']
-            if annual_savings > 0:
-                payback_years = investment_delta / annual_savings
-            else:
-                payback_years = float('inf') # Если экономии нет, окупаемость бесконечна
-
-        # e. Собираем все KPI
-        all_results.append({
-            "Scenario": scenario['name'],
-            "Staff Count": staff_count,
-            "Throughput (Orders)": sim_results['achieved_throughput'],
-            "Total Annual Cost (RUB)": int(total_annual_cost),
-            "Total CAPEX (RUB)": int(total_capex),
-            "Payback Period (Years)": payback_years,
-        })
-        
-    return pd.DataFrame(all_results)
-
-# --- ИСПОЛНЯЕМЫЙ БЛОК ---
-if __name__ == "__main__":
+    parser.add_argument("--name", type=str, default="Логопарк Север-2", help="Название анализируемой локации.")
+    parser.add_argument("--lat", type=float, default=56.095, help="Широта локации.")
+    parser.add_argument("--lon", type=float, default=37.388, help="Долгота локации.")
+    parser.add_argument("--type", type=str, default="ARENDA", choices=["ARENDA", "POKUPKA"], help="Тип владения: аренда или покупка.")
     
-    # 1. Выбираем локацию для анализа (например, Логопарк Север-2)
-    # Сначала инициализируем "API" Яндекса
-    geo_api = YandexGeoAnalyzer()
-    # Создаем объект локации
-    target_location = LocationParameters("Логопарк Север-2", 56.095, 37.388, "ARENDA", geo_api)
+    args = parser.parse_args()
+
+    # 1. Создание объекта (структуры данных) с параметрами локации из аргументов CLI.
+    location = LocationSpec(
+        name=args.name, 
+        lat=args.lat, 
+        lon=args.lon, 
+        ownership_type=args.type.upper()
+    )
     
-    print("="*80)
-    print(f"ЗАПУСК КОМПЛЕКСНОГО АНАЛИЗА ДЛЯ ЛОКАЦИИ: '{target_location.location_name}'")
-    print("="*80)
-
-    # 2. Запускаем анализ всех 4-х سناريوهات для этой локации
-    results_df = run_all_scenarios_for_location(target_location)
-    
-    # 3. Выводим красивую итоговую таблицу
-    print("\n" + "="*80)
-    print("ИТОГОВАЯ СРАВНИТЕЛЬНАЯ ТАБЛИЦА СЦЕНАРИЕВ")
-    print("="*80)
-    
-    # Форматирование для лучшей читаемости
-    results_df["Total Annual Cost (RUB)"] = results_df["Total Annual Cost (RUB)"].apply(lambda x: f"{x:,.0f}")
-    results_df["Total CAPEX (RUB)"] = results_df["Total CAPEX (RUB)"].apply(lambda x: f"{x:,.0f}")
-    results_df["Payback Period (Years)"] = results_df["Payback Period (Years)"].apply(lambda x: f"{x:.2f}" if not pd.isna(x) else "N/A")
-    
-    print(results_df.to_string(index=False))
-    analyzer = KpiAnalyzer()
-    
-    for scenario_id in SCENARIOS.keys():
-        params = SCENARIOS[scenario_id]
-        config = SimulationConfig(scenario=params)
-        
-        # Запускаем симуляцию
-        model = WarehouseModel(config)
-        simulation_stats, staff_manager = model.run()
-        
-        # Рассчитываем и собираем все KPI
-        final_kpi_set = analyzer.generate_kpis(params, simulation_stats, staff_manager)
-        all_results.append(final_kpi_set)
-    
-    return pd.DataFrame(all_results)
-
-def display_and_save_results(results_df):
-    """Форматирует, выводит в консоль и сохраняет результаты в CSV."""
-    
-    # ------------------ ШАГ 4 (Часть 1): Вывод в консоль ------------------
-    print("\n" + "="*100)
-    print("ИТОГОВАЯ СВОДКА KPI ДЛЯ DASHBOARD В FLEXSIM")
-    print("="*100)
-    print(results_df.to_string(index=False))
-    print("="*100)
-
-    # ------------------ ШАГ 4 (Часть 2): Экспорт в CSV ------------------
-    output_dir = 'output'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Используем имя файла, указанное в задании
-    file_path = os.path.join(output_dir, 'simulation_results.csv')
-    results_df.to_csv(file_path, index=False, decimal='.', sep=';')
-    print(f"\n✅ Результаты сохранены в файл: {file_path}")
-
-def create_and_save_plot(results_df):
-    """
-    Создает и сохраняет сравнительный график пропускной способности и затрат.
-    """
-    # ------------------ ШАГ 4 (Часть 3): Визуализация ------------------
-    
-    # Из-за большой разницы в масштабах (тысячи для throughput vs миллионы для затрат)
-    # мы будем использовать двойную ось Y (dual-axis plot).
-    
-    scenario_names = results_df['Scenario Name']
-    throughput = results_df['Achieved Throughput']
-    # Конвертируем затраты в млн для наглядности
-    costs_mln = results_df['Total Operational Cost (RUB)'] / 1_000_000
-
-    fig, ax1 = plt.subplots(figsize=(12, 7)) # Задаем размер графика
-
-    # Первая ось (ax1) для пропускной способности (столбцы)
-    color1 = 'tab:blue'
-    ax1.set_xlabel('Сценарии переезда', fontsize=12)
-    ax1.set_ylabel('Пропускная способность (заказов)', color=color1, fontsize=12)
-    ax1.bar(scenario_names, throughput, color=color1, label='Пропускная способность')
-    ax1.tick_params(axis='y', labelcolor=color1)
-    ax1.tick_params(axis='x', rotation=15) # Небольшой наклон для названий сценариев
-
-    # Создаем вторую ось (ax2), которая делит ось X с первой
-    ax2 = ax1.twinx()  
-    color2 = 'tab:red'
-    ax2.set_ylabel('Общие годовые затраты (млн руб.)', color=color2, fontsize=12)
-    # Затраты отображаем как линию поверх столбцов
-    ax2.plot(scenario_names, costs_mln, color=color2, marker='o', linestyle='-', linewidth=2, label='Годовые затраты')
-    ax2.tick_params(axis='y', labelcolor=color2)
-
-    # Общий заголовок и компоновка
-    plt.title('Сравнение сценариев: Пропускная способность vs. Годовые затраты', fontsize=16)
-    fig.tight_layout() # Автоматически подбирает отступы
-
-    # Сохранение графика
-    output_dir = 'output'
-    os.makedirs(output_dir, exist_ok=True)
-    plot_path = os.path.join(output_dir, 'simulation_comparison.png')
-    plt.savefig(plot_path, bbox_inches='tight')
-
-    print(f"✅ Сравнительный график сохранен в файл: {plot_path}")
-
+    # 2. Инициализация и запуск главного исполнителя.
+    runner = SimulationRunner(location_spec=location)
+    runner.run_all_scenarios()
 
 if __name__ == "__main__":
-    # 1. Запускаем полный цикл анализа и получаем DataFrame
-    results_dataframe = run_full_analysis()
-    
-    # 2. Отображаем результаты в консоли и сохраняем в CSV
-    display_and_save_results(results_dataframe)
-    
-    # 3. Создаем и сохраняем визуализацию
-    create_and_save_plot(results_dataframe)
+    main()

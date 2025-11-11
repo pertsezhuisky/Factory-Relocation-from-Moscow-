@@ -1,0 +1,25 @@
+{
+    "Global_Settings": {
+        "Scenario_Name": "4. Move Advanced Automation",
+        "location_name": "Логопарк Север-2",
+        "coordinates": {
+            "lat": 56.095,
+            "lon": 37.388
+        }
+    },
+    "Resource_Pool": {
+        "Operators": 75,
+        "Automated_Systems": [
+            "Conveyors",
+            "AGV",
+            "RoboticArms"
+        ]
+    },
+    "Process_Times": {
+        "Base_Efficiency_Multiplier": 2.0
+    },
+    "Throughput_Targets": {
+        "Monthly_Orders_Target": 10000,
+        "Monthly_Orders_Achieved": 10000
+    }
+}

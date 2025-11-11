@@ -1,0 +1,5 @@
+Location_Name;Scenario_Name;Staff_Required;Achieved_Throughput_Monthly;Avg_Cycle_Time_Min;Total_Annual_OPEX_RUB;Total_CAPEX_RUB;Payback_Period_Years
+Логопарк Север-2;1. Move No Mitigation;75;10000;15.0;258360399;350000000;
+Логопарк Север-2;2. Move With Compensation;85;10000;15.0;270960399;400000000;
+Логопарк Север-2;3. Move Basic Automation;75;10000;12.0;258360399;450000000;
+Логопарк Север-2;4. Move Advanced Automation;75;10000;7.5;258360399;650000000;

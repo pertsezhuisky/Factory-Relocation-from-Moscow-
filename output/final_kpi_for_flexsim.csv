@@ -1,5 +1,0 @@
-Scenario Name;Staff Remaining;Projected Throughput (Month);Avg Lead Time (min);Total Cost Year 1 (mln RUB);CAPEX (mln RUB);Annual Opex (mln RUB);HR Investment (mln RUB);Hiring Cost (mln RUB)
-Move No Mitigation;75;9984;15.0;249.5;0;244.5;0;5.0
-Move With Compensation;85;9984;15.0;310.1;0;257.1;50;3.0
-Move Basic Automation;75;9986;12.5;312.82;100;207.82;0;5.0
-Move Advanced Automation;75;9989;10.0;463.93;300;158.93;0;5.0
