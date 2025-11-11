@@ -93,8 +93,8 @@ class SimulationRunner:
             # Добавляем результат в общий список
             self.results.append(result)
             
-            # 7. Генерация JSON-файла для FlexSim
-            self.flexsim_bridge.generate_json_config(self.location_spec, scenario_data, self.fleet_optimizer)
+            # 7. Генерация JSON-файла для FlexSim (используем 'result' и 'scenario_data' для параметров)
+            self.flexsim_bridge.generate_json_config(self.location_spec, result, scenario_data)
 
         # 9. После завершения цикла сохраняем сводный CSV-файл
         self._save_summary_csv()

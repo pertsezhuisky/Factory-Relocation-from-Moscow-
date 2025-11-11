@@ -33,3 +33,61 @@ KEY_GEO_POINTS = {
 # --- Настройки вывода ---
 OUTPUT_DIR = "output"
 RESULTS_CSV_FILENAME = "simulation_results_dynamic.csv"
+
+# --- Кандидаты на релокацию (имитация данных из парсера) ---
+ALL_CANDIDATE_LOCATIONS = {
+    "logopark_sever_2": {
+        "name": "Логопарк Север-2",
+        "type": "ARENDA",
+        "lat": 56.03,
+        "lon": 37.59,
+        "area_offered_sqm": 17000,
+        "cost_metric_base": 8000.0,  # руб/м²/год
+        "current_class": "A_verified"
+    },
+    "bely_rast": {
+        "name": "Белый Раст Логистика",
+        "type": "ARENDA",
+        "lat": 56.09,
+        "lon": 37.49,
+        "area_offered_sqm": 20000,
+        "cost_metric_base": 10000.0, # руб/м²/год
+        "current_class": "A_verified"
+    },
+    "troitse_seltso": {
+        "name": "Склад Троице-сельцо",
+        "type": "ARENDA",
+        "lat": 55.98,
+        "lon": 37.60,
+        "area_offered_sqm": 25000,
+        "cost_metric_base": 15000.0, # руб/м²/год
+        "current_class": "A_requires_mod"
+    },
+    "plt_severnoe_sheremetievo": {
+        "name": "ПЛТ Северное Шереметьево",
+        "type": "ARENDA",
+        "lat": 56.00,
+        "lon": 37.50,
+        "area_offered_sqm": 30000,
+        "cost_metric_base": 10000.0, # руб/м²/год
+        "current_class": "A_verified"
+    },
+    "pnk_chashnikovo": {
+        "name": "PNK Чашниково BTS",
+        "type": "POKUPKA_BTS",
+        "lat": 56.01,
+        "lon": 37.10,
+        "area_offered_sqm": 20000,
+        "cost_metric_base": 1_500_000_000, # общая стоимость
+        "current_class": "A_requires_mod"
+    },
+    "esipovo_bts": {
+        "name": "Деревня Есипово BTS",
+        "type": "POKUPKA_BTS",
+        "lat": 56.02,
+        "lon": 37.00,
+        "area_offered_sqm": 25000,
+        "cost_metric_base": 2_000_000_000, # общая стоимость
+        "current_class": "A_requires_mod"
+    }
+}

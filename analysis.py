@@ -9,6 +9,58 @@ import os
 import config
 import math
 
+class AvitoParserStub:
+    """
+    Заглушка для парсера Авито/ЦИАН. Фильтрует и оценивает локации
+    по требованиям фармацевтического склада.
+    """
+    # 1. Константы на основе требований
+    REQUIRED_TOTAL_AREA = 17000
+    CAPEX_FIXED_EQUIPMENT = 50_000_000       # Стеллажное оборудование
+    CAPEX_GPP_GDP_CLIMATE = 250_000_000      # Установка и валидация климатики
+    CAPEX_MODIFICATION_IF_NEEDED = 100_000_000 # Доведение до класса А/фармстандартов
+
+    def filter_and_score_locations(self, candidate_locations: dict) -> list:
+        """
+        Фильтрует и оценивает локации из предоставленного списка.
+        """
+        scored_locations = []
+        
+        for key, loc in candidate_locations.items():
+            # 2.1 Фильтрация по площади
+            if loc['area_offered_sqm'] < self.REQUIRED_TOTAL_AREA:
+                continue
+
+            # 2.2 Расчет CAPEX
+            total_initial_capex = self.CAPEX_FIXED_EQUIPMENT + self.CAPEX_GPP_GDP_CLIMATE
+
+            # 2.3 Условная модификация
+            if loc['current_class'] == 'A_requires_mod':
+                total_initial_capex += self.CAPEX_MODIFICATION_IF_NEEDED
+
+            # 2.4 Расчет OPEX (помещение) и добавление стоимости покупки в CAPEX
+            annual_building_opex = 0
+            if loc['type'] == 'ARENDA':
+                annual_building_opex = loc['cost_metric_base'] * loc['area_offered_sqm']
+            elif loc['type'] == 'POKUPKA_BTS':
+                # Добавляем стоимость самого здания в CAPEX
+                total_initial_capex += loc['cost_metric_base']
+                # Расчет условных расходов на обслуживание
+                notional_rent_rate = 7000  # руб/м²/год
+                annual_building_opex = (notional_rent_rate * loc['area_offered_sqm']) * 0.05
+
+            scored_locations.append({
+                "location_name": loc['name'],
+                "lat": loc['lat'],
+                "lon": loc['lon'],
+                "type": loc['type'],
+                "area_offered_sqm": loc['area_offered_sqm'],
+                "annual_building_opex": annual_building_opex,
+                "total_initial_capex": total_initial_capex
+            })
+
+        return scored_locations
+
 class FleetOptimizer:
     """
     Анализирует транспортные потоки для расчета необходимого флота и годовых затрат.
@@ -135,25 +187,27 @@ def plot_results():
     plt.show()
 
 if __name__ == "__main__":
-    # Этот блок теперь может выполнять разные задачи.
-    # Для построения графика по-прежнему вызываем plot_results()
-    # plot_results()
-
-    # Демонстрация работы FleetOptimizer
+    # Демонстрация работы AvitoParserStub
     print("\n" + "="*80)
-    print("ЗАПУСК АНАЛИЗА ТРАНСПОРТНЫХ ПОТОКОВ (FleetOptimizer)")
+    print("ЗАПУСК ПАРСЕРА-ЗАГЛУШКИ (AvitoParserStub)")
     print("="*80)
-    optimizer = FleetOptimizer()
 
-    # 5. Заглушка для расстояний (Логопарк Север-2)
-    dist_cfo = 400  # км
-    dist_svo = 30   # км
-    dist_local = 60 # км
+    parser = AvitoParserStub()
 
-    required_fleet = optimizer.calculate_required_fleet()
-    annual_cost = optimizer.calculate_annual_transport_cost(dist_cfo, dist_svo, dist_local)
+    # Используем данные из config.py
+    candidate_locations = config.ALL_CANDIDATE_LOCATIONS
+    print(f"Найдено {len(candidate_locations)} потенциальных локаций для анализа.")
 
-    print(f"Расчет для новой локации (расстояния: ЦФО={dist_cfo}км, SVO={dist_svo}км, Local={dist_local}км):\n")
-    print(f"  > Минимально необходимое количество грузовиков для ЦФО: {required_fleet} шт.")
-    print(f"  > Прогнозируемые годовые транспортные расходы: {annual_cost:,.2f} руб.")
-    print("="*80)
+    scored_results = parser.filter_and_score_locations(candidate_locations)
+
+    print(f"\nПосле фильтрации и оценки осталось {len(scored_results)} подходящих локаций:")
+    print("-" * 80)
+
+    # Демонстрация для конкретных локаций
+    for loc in scored_results:
+        if loc['location_name'] in ['Белый Раст Логистика', 'PNK Чашниково BTS']:
+            print(f"Локация: '{loc['location_name']}' ({loc['type']})")
+            print(f"  > Площадь: {loc['area_offered_sqm']} м²")
+            print(f"  > OPEX (помещение): {loc['annual_building_opex']:,.0f} руб./год")
+            print(f"  > CAPEX (начальный):  {loc['total_initial_capex']:,.0f} руб.")
+            print("-" * 80)
