@@ -1,38 +1,49 @@
-from config import ScenarioParams, INITIAL_STAFF, BASE_SALARY_RUB_MONTH, COST_PER_NEW_HIRE_RUB, BASE_ANNUAL_OPEX_NO_LABOR_RUB, WORKING_DAYS
+from config import ScenarioParams, BASE_SALARY_RUB_MONTH, TOTAL_WAREHOUSE_AREA_SQM, ANNUAL_RENT_PER_SQM_RUB
 from simulation_model import StaffManager
 
-class FinancialCalculator:
-    """Рассчитывает финансовые KPI на основе результатов симуляции."""
-    def calculate(self, scenario: ScenarioParams, sim_stats: dict, staff_mgr: StaffManager) -> dict:
-        staff_remaining = staff_mgr.get_staff_count()
-        staff_to_hire = INITIAL_STAFF - staff_remaining
+class KpiAnalyzer:
+    """
+    Отвечает за расчет и сборку всех KPI на основе
+    параметров сценария и результатов симуляции.
+    """
+
+    def _calculate_annual_costs(self, staff_count: int) -> float:
+        """Рассчитывает годовые операционные расходы (аренда + ФОТ)."""
+        # Годовые затраты на персонал (ФОТ)
+        annual_salary_cost = staff_count * BASE_SALARY_RUB_MONTH * 12
+        # Годовые затраты на аренду
+        annual_rent_cost = TOTAL_WAREHOUSE_AREA_SQM * ANNUAL_RENT_PER_SQM_RUB
         
-        # CAPEX
-        capex = scenario.capex_mln_rub * 1_000_000
-        hr_investments = scenario.hr_cost_mln_rub * 1_000_000
+        total_opex = annual_salary_cost + annual_rent_cost
+        return total_opex
+
+    def generate_kpis(self, scenario: ScenarioParams, sim_stats: dict, staff_mgr: StaffManager) -> dict:
+        """
+        Собирает все требуемые KPI для одного сценария в словарь.
+        """
+        staff_count = staff_mgr.get_staff_count()
         
-        # Annual OPEX
-        labor_cost = staff_remaining * BASE_SALARY_RUB_MONTH * 12
-        other_opex = BASE_ANNUAL_OPEX_NO_LABOR_RUB
-        total_opex_before_savings = labor_cost + other_opex
-        opex_savings = total_opex_before_savings * scenario.opex_savings_rate
-        annual_opex = total_opex_before_savings - opex_savings
+        # 1. Staff Count
+        kpi_staff_count = staff_count
         
-        # Year 1 Costs
-        hiring_cost = staff_to_hire * COST_PER_NEW_HIRE_RUB
-        total_cost_year1 = capex + hr_investments + annual_opex + hiring_cost
+        # 2. Total Operational Cost
+        kpi_op_cost = self._calculate_annual_costs(staff_count)
         
-        # Throughput
-        projected_monthly_throughput = (sim_stats['processed_orders'] / WORKING_DAYS) * WORKING_DAYS
+        # 3. Investment
+        # Включаем и CAPEX, и затраты на удержание, если они есть
+        kpi_investment = scenario.capital_investment_mln_rub
+        
+        # 4. Achieved Throughput
+        kpi_throughput = sim_stats['achieved_throughput']
+
+        # 5. Average Cycle Time
+        kpi_avg_cycle_time = sim_stats['average_cycle_time_min']
         
         return {
             "Scenario Name": scenario.name,
-            "Staff Remaining": staff_remaining,
-            "Projected Throughput (Month)": int(projected_monthly_throughput),
-            "Avg Lead Time (min)": sim_stats['avg_lead_time_min'],
-            "Total Cost Year 1 (mln RUB)": round(total_cost_year1 / 1_000_000, 2),
-            "CAPEX (mln RUB)": scenario.capex_mln_rub,
-            "Annual Opex (mln RUB)": round(annual_opex / 1_000_000, 2),
-            "HR Investment (mln RUB)": scenario.hr_cost_mln_rub,
-            "Hiring Cost (mln RUB)": round(hiring_cost / 1_000_000, 2),
+            "Staff Count": kpi_staff_count,
+            "Total Operational Cost (RUB)": int(kpi_op_cost),
+            "Investment (mln RUB)": kpi_investment,
+            "Achieved Throughput": kpi_throughput,
+            "Average Cycle Time (min)": kpi_avg_cycle_time
         }

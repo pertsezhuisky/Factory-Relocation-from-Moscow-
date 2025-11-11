@@ -1,0 +1,5 @@
+Scenario Name;Staff Count;Total Operational Cost (RUB);Investment (mln RUB);Achieved Throughput;Average Cycle Time (min)
+Move No Mitigation;75;230500000;0;10000;15.0
+Move With Compensation;85;243100000;50;10000;15.0
+Move Basic Automation;75;230500000;100;10000;12.0
+Move Advanced Automation;75;230500000;300;10000;7.5
