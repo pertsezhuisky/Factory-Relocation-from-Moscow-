@@ -40,20 +40,38 @@ class SimulationRunner:
         # 2. Генерируем полные данные для всех сценариев
         all_scenarios = generate_scenario_data(base_finance)
 
+        print("\n--- Финансовая модель проекта ---")
+        if config.CURRENT_WAREHOUSE_IS_OWNED:
+            print(f"  [+] Учитывается продажа текущего актива.")
+            print(f"  > Выручка от продажи: {config.CURRENT_WAREHOUSE_SALE_VALUE_RUB:,.0f} руб. (снижает CAPEX)")
+        else:
+            print("  [-] Продажа текущего актива не учитывается (он в аренде).")
+        print("-------------------------------------------\n")
+
         # --- Демонстрация для Сценария 2 и 4 ---
         print("\n--- Демонстрация сгенерированных данных ---")
         s2_data = all_scenarios.get("2_Move_With_Compensation")
         s4_data = all_scenarios.get("4_Move_Advanced_Automation")
-        print(f"Сценарий 2 ('{s2_data['name']}'):")
-        print(f"  - Персонал: {s2_data['staff_count']} чел.")
-        print(f"  - Эффективность: x{s2_data['processing_efficiency']}")
-        print(f"  - Итоговый CAPEX: {s2_data['total_capex']:,.0f} руб.")
-        print(f"  - Итоговый OPEX: {s2_data['total_opex']:,.0f} руб.")
-        print(f"Сценарий 4 ('{s4_data['name']}'):")
-        print(f"  - Персонал: {s4_data['staff_count']} чел.")
-        print(f"  - Эффективность: x{s4_data['processing_efficiency']}")
-        print(f"  - Итоговый CAPEX: {s4_data['total_capex']:,.0f} руб.")
-        print(f"  - Итоговый OPEX: {s4_data['total_opex']:,.0f} руб.")
+
+        # ИСПРАВЛЕННЫЙ БЛОК: Добавлена проверка на None
+        if s2_data:
+            print(f"Сценарий 2 ('{s2_data['name']}'):")
+            print(f"  - Персонал: {s2_data['staff_count']} чел.")
+            print(f"  - Эффективность: x{s2_data['processing_efficiency']}")
+            print(f"  - Итоговый CAPEX: {s2_data['total_capex']:,.0f} руб.")
+            print(f"  - Итоговый OPEX: {s2_data['total_opex']:,.0f} руб.")
+        else:
+            print("[ПРЕДУПРЕЖДЕНИЕ] Данные для Сценария 2 не найдены в конфигурации.")
+
+        if s4_data:
+            print(f"Сценарий 4 ('{s4_data['name']}'):")
+            print(f"  - Персонал: {s4_data['staff_count']} чел.")
+            print(f"  - Эффективность: x{s4_data['processing_efficiency']}")
+            print(f"  - Итоговый CAPEX: {s4_data['total_capex']:,.0f} руб.")
+            print(f"  - Итоговый OPEX: {s4_data['total_opex']:,.0f} руб.")
+        else:
+            print("[ПРЕДУПРЕЖДЕНИЕ] Данные для Сценария 4 не найдены в конфигурации.")
+        
         print("-------------------------------------------\n")
 
         baseline_annual_opex = 0  # OPEX базового сценария для расчета экономии
@@ -74,15 +92,13 @@ class SimulationRunner:
             
             # 5. Имитация получения KPI от FlexSim
             flexsim_kpi = self.flexsim_bridge.receive_kpi()
-            # Здесь можно было бы использовать flexsim_kpi['achieved_throughput'],
-            # но для консистентности продолжим использовать KPI из нашей SimPy модели.
             
             # 6. Финальный расчет окупаемости (ROI / Payback Period)
             payback = self.calculate_roi(scenario_data)
             if payback is not None:
                 print(f"  > Расчетный срок окупаемости: {payback:.2f} лет")
 
-            # 6. Сборка всех KPI в единую структуру данных
+            # 7. Сборка всех KPI в единую структуру данных
             result = ScenarioResult(
                 location_name=self.location_spec.name,
                 scenario_name=scenario_data['name'],
@@ -93,27 +109,23 @@ class SimulationRunner:
                 total_capex_rub=int(scenario_data['total_capex']),
                 payback_period_years=payback if payback is not None else float('nan')
             )
-            # Добавляем результат в общий список
             self.results.append(result)
             
-            # 7. Генерация JSON-файла для FlexSim (используем 'result' и 'scenario_data' для параметров)
+            # 8. Генерация JSON-файла для FlexSim
             self.flexsim_bridge.generate_json_config(self.location_spec, result, scenario_data)
 
         # 9. После завершения цикла сохраняем сводный CSV-файл
         self._save_summary_csv()
         print(f"\n--- Анализ для локации '{self.location_spec.name}' завершен. ---")
 
-    def calculate_roi(self, scenario_data: dict) -> Optional[float]:
+    def calculate_roi(self, scenario_data: Dict[str, Any]) -> Optional[float]:
         """
         Рассчитывает срок окупаемости (Payback Period) для сценария.
         Сравнивает OPEX нового склада с OPEX текущего склада в Москве.
         """
         # 1. Расчет OPEX текущего склада (Baseline)
-        # Аренда в Москве: 12000 руб/м2/год (1000 руб/м2/мес * 12)
         current_rent_opex = 12000 * config.WAREHOUSE_TOTAL_AREA_SQM
-        # Зарплаты в Москве (без сокращений)
         current_labor_opex = config.INITIAL_STAFF_COUNT * config.OPERATOR_SALARY_RUB_MONTH * 12
-        # Транспортные расходы считаем нулевыми (это наша база для сравнения)
         total_baseline_opex = current_rent_opex + current_labor_opex
 
         # 2. OPEX нового сценария (уже рассчитан)
@@ -123,18 +135,23 @@ class SimulationRunner:
         annual_savings = total_baseline_opex - new_scenario_opex
 
         if annual_savings > 0:
-            payback_period_years = scenario_data['total_capex'] / annual_savings
+            # CAPEX для окупаемости должен быть "грязным" - без учета продажи старого актива,
+            # так как это инвестиции, которые нужно понести.
+            capex_for_roi = scenario_data['total_capex']
+            if config.CURRENT_WAREHOUSE_IS_OWNED:
+                # Возвращаем стоимость продажи, чтобы получить полную сумму инвестиций
+                capex_for_roi += config.CURRENT_WAREHOUSE_SALE_VALUE_RUB
+                
+            payback_period_years = capex_for_roi / annual_savings
             return payback_period_years
-        return None # Окупаемости нет, если экономия не положительная
+        return None
 
     def _save_summary_csv(self):
         """Сохраняет сводный CSV-файл со всеми результатами."""
         if not self.results: return
         
-        # Преобразуем список объектов ScenarioResult в DataFrame
         df = pd.DataFrame([res.__dict__ for res in self.results])
         
-        # Переименовываем колонки для совместимости с требованиями FlexSim
         column_map = {
             "location_name": "Location_Name", "scenario_name": "Scenario_Name",
             "total_annual_opex_rub": "Total_Annual_OPEX_RUB", "total_capex_rub": "Total_CAPEX_RUB",

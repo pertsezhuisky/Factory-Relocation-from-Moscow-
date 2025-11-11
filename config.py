@@ -9,6 +9,10 @@ INITIAL_STAFF_COUNT = 100
 OPERATOR_SALARY_RUB_MONTH = 105000
 TRANSPORT_TARIFF_RUB_PER_KM = 13.4  # Средний тариф для 18-20т фуры
 
+# --- Параметры текущего актива (старый склад на "Сходненской") ---
+CURRENT_WAREHOUSE_IS_OWNED = True  # Мы владеем текущим складом? True - да, False - нет (в аренде)
+CURRENT_WAREHOUSE_SALE_VALUE_RUB = 800_000_000 # Оценочная стоимость продажи текущего склада в руб.
+
 # --- Константы склада и локации ---
 WAREHOUSE_TOTAL_AREA_SQM = 17000
 ANNUAL_RENT_PER_SQM_RUB = 7500.0
@@ -29,6 +33,12 @@ KEY_GEO_POINTS = {
     "CFD_HUBs_Avg": (54.51, 36.26),
     "Moscow_Clients_Avg": (55.75, 37.62),
 }
+
+# --- Новые константы: Ограничения для грузовиков в Москве ---
+MOSCOW_RESTRICTION_TONNAGE = 3.5  # Максимальная грузоподъемность в тоннах без пропуска
+FREE_PASSES_PER_MONTH = 2         # Количество бесплатных рейсов в месяц для >3.5т
+# Повышенный тариф для моделирования использования более мелкого и дорогого транспорта в Москве
+MOSCOW_DELIVERY_TARIFF_RUB_PER_KM = 18.5 
 
 # --- Настройки вывода ---
 OUTPUT_DIR = "output"

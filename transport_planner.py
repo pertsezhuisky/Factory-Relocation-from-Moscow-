@@ -29,18 +29,16 @@ class VehicleType:
 VEHICLE_TYPES = {
     'heavy_truck_20t': VehicleType(
         name='Грузовик 18-20т (тентованный)',
-        capacity_pallets=33,  # Стандартные европаллеты
+        capacity_pallets=33,
         capacity_kg=20000,
         fuel_consumption_l_per_100km=28.0,
         maintenance_cost_rub_per_km=8.5,
-        driver_cost_rub_per_trip=15000,  # Межрегиональный рейс
+        driver_cost_rub_per_trip=15000,
         driver_cost_rub_per_day=0,
         purchase_cost_rub=4_500_000,
         lease_cost_rub_per_month=180_000,
         insurance_rub_per_year=120_000,
-        is_refrigerated=False
     ),
-
     'medium_truck_5t': VehicleType(
         name='Грузовик 5т (городской)',
         capacity_pallets=8,
@@ -48,18 +46,29 @@ VEHICLE_TYPES = {
         fuel_consumption_l_per_100km=18.0,
         maintenance_cost_rub_per_km=5.2,
         driver_cost_rub_per_trip=0,
-        driver_cost_rub_per_day=4500,  # Ежедневная работа
+        driver_cost_rub_per_day=4500,
         purchase_cost_rub=2_800_000,
         lease_cost_rub_per_month=95_000,
         insurance_rub_per_year=65_000,
-        is_refrigerated=False
     ),
-
+    # <--- НОВЫЙ ТИП ТРАНСПОРТА --->
+    'light_van_1_5t': VehicleType(
+        name='Фургон 1.5т (без пропуска)',
+        capacity_pallets=4,
+        capacity_kg=1500,
+        fuel_consumption_l_per_100km=15.0,
+        maintenance_cost_rub_per_km=4.0,
+        driver_cost_rub_per_trip=0,
+        driver_cost_rub_per_day=4000,
+        purchase_cost_rub=2_100_000,
+        lease_cost_rub_per_month=70_000,
+        insurance_rub_per_year=50_000,
+    ),
     'refrigerated_truck_15t': VehicleType(
         name='Рефрижератор 15т (2-8°C)',
         capacity_pallets=24,
         capacity_kg=15000,
-        fuel_consumption_l_per_100km=32.0,  # Выше из-за холодильника
+        fuel_consumption_l_per_100km=32.0,
         maintenance_cost_rub_per_km=12.0,
         driver_cost_rub_per_trip=18000,
         driver_cost_rub_per_day=5500,
@@ -80,30 +89,19 @@ class DetailedFleetPlanner:
     - Пропускной способности доков
     - Детального CAPEX/OPEX транспорта
     """
-
-    # Константы потоков (из analysis.py)
-    CFO_OWN_FLEET_SHARE = 0.46      # ЦФО собственный флот
-    AIR_DELIVERY_SHARE = 0.25       # Авиа через SVO
-    LOCAL_DELIVERY_SHARE = 0.29     # Местные ЛПУ Москвы
-
-    # Холодная цепь (средний процент от общего объема)
-    COLD_CHAIN_SHARE = 0.17  # 17% требуют 2-8°C
-
-    # Константы работы склада
+    # ... (Константы без изменений) ...
+    CFO_OWN_FLEET_SHARE = 0.46
+    AIR_DELIVERY_SHARE = 0.25
+    LOCAL_DELIVERY_SHARE = 0.29
+    COLD_CHAIN_SHARE = 0.17
     WAREHOUSE_OPERATES_24_7 = True
     WORKING_DAYS_PER_WEEK = 7
     WORKING_HOURS_PER_DAY = 24
-
-    # Средний вес заказа (из документации: одна паллета ≈ 250кг)
     AVG_ORDER_WEIGHT_KG = 250
     AVG_ORDER_PALLETS = 1.0
-
-    # Константы доков
-    LOADING_TIME_PER_TRUCK_HOURS = 1.5  # Время погрузки одного грузовика
-    UNLOADING_TIME_PER_TRUCK_HOURS = 2.0  # Время разгрузки (дольше из-за проверок GPP/GDP)
-    BUFFER_COEFFICIENT = 1.3  # Буфер на пиковые нагрузки
-
-    # Цены на топливо
+    LOADING_TIME_PER_TRUCK_HOURS = 1.5
+    UNLOADING_TIME_PER_TRUCK_HOURS = 2.0
+    BUFFER_COEFFICIENT = 1.3
     DIESEL_PRICE_RUB_PER_LITER = 56.0
 
     def __init__(self):
@@ -114,20 +112,16 @@ class DetailedFleetPlanner:
     def calculate_fleet_requirements(self, distances: Dict[str, float]) -> Dict[str, Any]:
         """
         Рассчитывает детальные требования к флоту для всех потоков.
-
-        Args:
-            distances: Словарь с расстояниями {'cfo_km': float, 'svo_km': float, 'local_km': float}
-
-        Returns:
-            Детальная информация о требуемом флоте и затратах
         """
         print(f"\n  > [DetailedFleetPlanner] Расчет детальных требований к транспортному флоту")
 
         # 1. ЦФО: тяжелые грузовики 18-20т
         cfo_fleet = self._calculate_cfo_fleet(distances['cfo_km'])
 
-        # 2. Местные ЛПУ: средние грузовики 5т
-        local_fleet = self._calculate_local_fleet(distances['local_km'])
+        # <--- ЛОГИКА ИЗМЕНЕНА --->
+        # 2. Местные ЛПУ: разделенный флот (5т по пропуску + 1.5т без пропуска)
+        # Метод теперь возвращает два словаря - для каждого типа транспорта
+        local_fleet_pass, local_fleet_base = self._calculate_local_fleet(distances['local_km'])
 
         # 3. SVO авиа: средние грузовики + рефрижераторы
         svo_fleet = self._calculate_svo_fleet(distances['svo_km'])
@@ -135,246 +129,181 @@ class DetailedFleetPlanner:
         # 4. Холодная цепь: дополнительные рефрижераторы
         cold_chain_fleet = self._calculate_cold_chain_fleet(distances)
 
-        # 5. Общие затраты
-        total_fleet = self._aggregate_fleet_costs(cfo_fleet, local_fleet, svo_fleet, cold_chain_fleet)
+        # 5. Общие затраты (передаем все 5 типов флота)
+        total_fleet = self._aggregate_fleet_costs(
+            cfo_fleet, 
+            local_fleet_pass, 
+            local_fleet_base, 
+            svo_fleet, 
+            cold_chain_fleet
+        )
 
         return total_fleet
 
     def _calculate_cfo_fleet(self, avg_distance_km: float) -> Dict[str, Any]:
         """
         Расчет флота для ЦФО (46% потока, собственный флот 18-20т).
-
-        Логика:
-        - 2 рейса в неделю на один грузовик
-        - Консолидация грузов до полной загрузки
         """
         vehicle = VEHICLE_TYPES['heavy_truck_20t']
-
-        # Заказы в ЦФО за месяц
         cfo_orders_per_month = self.monthly_orders * self.CFO_OWN_FLEET_SHARE
-        cfo_orders_per_week = cfo_orders_per_month / 4.33  # Средних недель в месяце
-
-        # Сколько паллет нужно перевезти
+        cfo_orders_per_week = cfo_orders_per_month / 4.33
         total_pallets_per_week = cfo_orders_per_week * self.AVG_ORDER_PALLETS
-
-        # Рейсов в неделю (с учетом вместимости)
         trips_per_week = math.ceil(total_pallets_per_week / vehicle.capacity_pallets)
-
-        # Необходимое количество грузовиков (2 рейса/неделю на грузовик)
         trips_per_truck_per_week = 2
         required_trucks = math.ceil(trips_per_week / trips_per_truck_per_week)
-
-        # Годовые расстояния
         annual_trips = trips_per_week * 52
-        annual_distance_km = annual_trips * avg_distance_km * 2  # Туда-обратно
-
-        # Затраты
+        annual_distance_km = annual_trips * avg_distance_km * 2
         fuel_cost = (annual_distance_km / 100) * vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
         maintenance_cost = annual_distance_km * vehicle.maintenance_cost_rub_per_km
         driver_cost = annual_trips * vehicle.driver_cost_rub_per_trip
         insurance_cost = required_trucks * vehicle.insurance_rub_per_year
-
-        # CAPEX/OPEX: покупка vs аренда
         purchase_capex = required_trucks * vehicle.purchase_cost_rub
         lease_opex_annual = required_trucks * vehicle.lease_cost_rub_per_month * 12
-
         print(f"    - ЦФО (18-20т): {required_trucks} грузовиков, {annual_trips} рейсов/год")
-
         return {
-            'fleet_type': 'heavy_truck_20t',
-            'vehicle_name': vehicle.name,
-            'required_count': required_trucks,
-            'annual_trips': annual_trips,
-            'annual_distance_km': annual_distance_km,
+            'fleet_type': 'heavy_truck_20t', 'vehicle_name': vehicle.name, 'required_count': required_trucks,
+            'annual_trips': annual_trips, 'annual_distance_km': annual_distance_km,
             'avg_distance_per_trip_km': avg_distance_km,
-            'costs': {
-                'fuel_rub': fuel_cost,
-                'maintenance_rub': maintenance_cost,
-                'driver_salaries_rub': driver_cost,
-                'insurance_rub': insurance_cost,
-                'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost
-            },
-            'capex_purchase_rub': purchase_capex,
-            'opex_lease_rub': lease_opex_annual
+            'costs': {'fuel_rub': fuel_cost, 'maintenance_rub': maintenance_cost, 'driver_salaries_rub': driver_cost,
+                      'insurance_rub': insurance_cost, 'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost},
+            'capex_purchase_rub': purchase_capex, 'opex_lease_rub': lease_opex_annual
         }
-
-    def _calculate_local_fleet(self, avg_distance_km: float) -> Dict[str, Any]:
+        
+    # <--- ПОЛНОСТЬЮ ПЕРЕПИСАННЫЙ МЕТОД --->
+    def _calculate_local_fleet(self, avg_distance_km: float) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Расчет флота для местных ЛПУ Москвы (29% потока, 5т грузовики).
-
-        Логика:
-        - Ежедневные развозки
-        - 6-8 точек за день (в среднем 7)
+        Расчет флота для местных ЛПУ Москвы, разделенного на 2 части:
+        1. 5т грузовики по бесплатным пропускам (2 рейса/мес).
+        2. 1.5т фургоны для остального объема.
         """
-        vehicle = VEHICLE_TYPES['medium_truck_5t']
+        # --- 1. Расчет для 5т грузовиков (льготные рейсы) ---
+        pass_vehicle = VEHICLE_TYPES['medium_truck_5t']
+        
+        # 2 рейса в месяц
+        pass_annual_trips = config.FREE_PASSES_PER_MONTH * 12
+        # Сколько паллет можно увезти этими рейсами
+        pallets_on_pass_trips = pass_annual_trips * pass_vehicle.capacity_pallets
+        # Для этих рейсов достаточно 1 машины, работающей по вызову
+        pass_required_trucks = 1 
+        
+        pass_annual_distance_km = pass_annual_trips * avg_distance_km
+        pass_fuel = (pass_annual_distance_km / 100) * pass_vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
+        pass_maint = pass_annual_distance_km * pass_vehicle.maintenance_cost_rub_per_km
+        pass_driver = pass_annual_trips * pass_vehicle.driver_cost_rub_per_day # Платим за день работы
+        pass_ins = pass_required_trucks * pass_vehicle.insurance_rub_per_year
+        pass_capex = pass_required_trucks * pass_vehicle.purchase_cost_rub
+        pass_lease = pass_required_trucks * pass_vehicle.lease_cost_rub_per_month * 12
 
-        # Заказы в день
-        local_orders_per_day = (self.monthly_orders * self.LOCAL_DELIVERY_SHARE) / 22  # 22 рабочих дня
-
-        # Точек доставки за день на один грузовик
-        points_per_truck_per_day = 7
-
-        # Необходимое количество грузовиков
-        required_trucks = math.ceil(local_orders_per_day / points_per_truck_per_day)
-
-        # Годовые расстояния
-        working_days_per_year = 22 * 12  # 264 дня
-        annual_distance_km = required_trucks * working_days_per_year * avg_distance_km
-
-        # Затраты
-        fuel_cost = (annual_distance_km / 100) * vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
-        maintenance_cost = annual_distance_km * vehicle.maintenance_cost_rub_per_km
-        driver_cost = required_trucks * vehicle.driver_cost_rub_per_day * working_days_per_year
-        insurance_cost = required_trucks * vehicle.insurance_rub_per_year
-
-        purchase_capex = required_trucks * vehicle.purchase_cost_rub
-        lease_opex_annual = required_trucks * vehicle.lease_cost_rub_per_month * 12
-
-        print(f"    - Местные ЛПУ (5т): {required_trucks} грузовиков, ежедневные развозки")
-
-        return {
-            'fleet_type': 'medium_truck_5t',
-            'vehicle_name': vehicle.name,
-            'required_count': required_trucks,
-            'annual_trips': working_days_per_year * required_trucks,
-            'annual_distance_km': annual_distance_km,
+        pass_fleet_data = {
+            'fleet_type': 'medium_truck_5t_pass', 'vehicle_name': pass_vehicle.name + " (Пропуск)", 'required_count': pass_required_trucks,
+            'annual_trips': pass_annual_trips, 'annual_distance_km': pass_annual_distance_km,
             'avg_distance_per_trip_km': avg_distance_km,
-            'costs': {
-                'fuel_rub': fuel_cost,
-                'maintenance_rub': maintenance_cost,
-                'driver_salaries_rub': driver_cost,
-                'insurance_rub': insurance_cost,
-                'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost
-            },
-            'capex_purchase_rub': purchase_capex,
-            'opex_lease_rub': lease_opex_annual
+            'costs': {'fuel_rub': pass_fuel, 'maintenance_rub': pass_maint, 'driver_salaries_rub': pass_driver, 'insurance_rub': pass_ins,
+                      'total_opex_rub': pass_fuel + pass_maint + pass_driver + pass_ins},
+            'capex_purchase_rub': pass_capex, 'opex_lease_rub': pass_lease
         }
+        print(f"    - Местные ЛПУ (5т по пропуску): {pass_required_trucks} грузовик, {pass_annual_trips} рейсов/год")
+
+        # --- 2. Расчет для 1.5т фургонов (основной объем) ---
+        base_vehicle = VEHICLE_TYPES['light_van_1_5t']
+        
+        # Общий годовой объем в паллетах для Москвы
+        total_local_pallets_annual = (self.monthly_orders * self.LOCAL_DELIVERY_SHARE * 12) * self.AVG_ORDER_PALLETS
+        # Оставшийся объем после льготных рейсов
+        remaining_pallets_annual = total_local_pallets_annual - pallets_on_pass_trips
+        
+        # Необходимое количество рейсов на малых фургонах
+        base_annual_trips = math.ceil(remaining_pallets_annual / base_vehicle.capacity_pallets)
+        working_days_per_year = 22 * 12
+        trips_per_day = base_annual_trips / working_days_per_year
+
+        # 1 фургон делает 2 рейса в день
+        base_required_trucks = math.ceil(trips_per_day / 2)
+
+        base_annual_distance_km = base_annual_trips * avg_distance_km
+        base_fuel = (base_annual_distance_km / 100) * base_vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
+        base_maint = base_annual_distance_km * base_vehicle.maintenance_cost_rub_per_km
+        base_driver = base_required_trucks * base_vehicle.driver_cost_rub_per_day * working_days_per_year
+        base_ins = base_required_trucks * base_vehicle.insurance_rub_per_year
+        base_capex = base_required_trucks * base_vehicle.purchase_cost_rub
+        base_lease = base_required_trucks * base_vehicle.lease_cost_rub_per_month * 12
+
+        base_fleet_data = {
+            'fleet_type': 'light_van_1_5t', 'vehicle_name': base_vehicle.name, 'required_count': base_required_trucks,
+            'annual_trips': base_annual_trips, 'annual_distance_km': base_annual_distance_km,
+            'avg_distance_per_trip_km': avg_distance_km,
+            'costs': {'fuel_rub': base_fuel, 'maintenance_rub': base_maint, 'driver_salaries_rub': base_driver, 'insurance_rub': base_ins,
+                      'total_opex_rub': base_fuel + base_maint + base_driver + base_ins},
+            'capex_purchase_rub': base_capex, 'opex_lease_rub': base_lease
+        }
+        print(f"    - Местные ЛПУ (1.5т без пропуска): {base_required_trucks} фургонов, {base_annual_trips} рейсов/год")
+
+        return pass_fleet_data, base_fleet_data
 
     def _calculate_svo_fleet(self, avg_distance_km: float) -> Dict[str, Any]:
         """
         Расчет флота для авиадоставки в SVO (25% потока).
-
-        Логика:
-        - Ежедневные поставки в карго-терминал
-        - Используем 5т грузовики
         """
         vehicle = VEHICLE_TYPES['medium_truck_5t']
-
-        # Заказы в день для авиа
         svo_orders_per_day = (self.monthly_orders * self.AIR_DELIVERY_SHARE) / 22
-
-        # Паллет в день
         pallets_per_day = svo_orders_per_day * self.AVG_ORDER_PALLETS
-
-        # Рейсов в день (вместимость 8 паллет)
         trips_per_day = math.ceil(pallets_per_day / vehicle.capacity_pallets)
-
-        # Необходимое количество грузовиков (с запасом на 2 рейса в день)
         required_trucks = math.ceil(trips_per_day / 2)
-
-        # Годовые расстояния
         working_days_per_year = 264
         annual_trips = trips_per_day * working_days_per_year
-        annual_distance_km = annual_trips * avg_distance_km * 2  # Туда-обратно
-
-        # Затраты
+        annual_distance_km = annual_trips * avg_distance_km * 2
         fuel_cost = (annual_distance_km / 100) * vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
         maintenance_cost = annual_distance_km * vehicle.maintenance_cost_rub_per_km
         driver_cost = required_trucks * vehicle.driver_cost_rub_per_day * working_days_per_year
         insurance_cost = required_trucks * vehicle.insurance_rub_per_year
-
         purchase_capex = required_trucks * vehicle.purchase_cost_rub
         lease_opex_annual = required_trucks * vehicle.lease_cost_rub_per_month * 12
-
         print(f"    - SVO авиа (5т): {required_trucks} грузовиков, {trips_per_day} рейсов/день")
-
         return {
-            'fleet_type': 'medium_truck_5t_svo',
-            'vehicle_name': vehicle.name + ' (SVO)',
-            'required_count': required_trucks,
-            'annual_trips': annual_trips,
-            'annual_distance_km': annual_distance_km,
+            'fleet_type': 'medium_truck_5t_svo', 'vehicle_name': vehicle.name + ' (SVO)', 'required_count': required_trucks,
+            'annual_trips': annual_trips, 'annual_distance_km': annual_distance_km,
             'avg_distance_per_trip_km': avg_distance_km,
-            'costs': {
-                'fuel_rub': fuel_cost,
-                'maintenance_rub': maintenance_cost,
-                'driver_salaries_rub': driver_cost,
-                'insurance_rub': insurance_cost,
-                'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost
-            },
-            'capex_purchase_rub': purchase_capex,
-            'opex_lease_rub': lease_opex_annual
+            'costs': {'fuel_rub': fuel_cost, 'maintenance_rub': maintenance_cost, 'driver_salaries_rub': driver_cost,
+                      'insurance_rub': insurance_cost, 'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost},
+            'capex_purchase_rub': purchase_capex, 'opex_lease_rub': lease_opex_annual
         }
-
+    
     def _calculate_cold_chain_fleet(self, distances: Dict[str, float]) -> Dict[str, Any]:
         """
         Расчет рефрижераторов для холодной цепи (17% от общего объема).
-
-        Распределяется по всем потокам пропорционально.
         """
         vehicle = VEHICLE_TYPES['refrigerated_truck_15t']
-
-        # Холодные заказы в месяц
         cold_orders_per_month = self.monthly_orders * self.COLD_CHAIN_SHARE
-
-        # Распределяем по потокам
         cold_cfo = cold_orders_per_month * self.CFO_OWN_FLEET_SHARE
         cold_local = cold_orders_per_month * self.LOCAL_DELIVERY_SHARE
         cold_svo = cold_orders_per_month * self.AIR_DELIVERY_SHARE
-
-        # Рейсы в месяц (15т = 24 паллеты)
         trips_per_month = math.ceil((cold_cfo + cold_local + cold_svo) / vehicle.capacity_pallets)
         trips_per_week = trips_per_month / 4.33
-
-        # Необходимое количество рефрижераторов (2 рейса в неделю)
         required_trucks = math.ceil(trips_per_week / 2)
-
-        # Средняя дистанция (взвешенная)
-        avg_weighted_distance = (
-            distances['cfo_km'] * self.CFO_OWN_FLEET_SHARE +
-            distances['local_km'] * self.LOCAL_DELIVERY_SHARE +
-            distances['svo_km'] * self.AIR_DELIVERY_SHARE
-        )
-
-        # Годовые расстояния
+        avg_weighted_distance = (distances['cfo_km'] * self.CFO_OWN_FLEET_SHARE + distances['local_km'] * self.LOCAL_DELIVERY_SHARE + distances['svo_km'] * self.AIR_DELIVERY_SHARE)
         annual_trips = trips_per_month * 12
         annual_distance_km = annual_trips * avg_weighted_distance * 2
-
-        # Часы работы холодильника
-        avg_trip_hours = (avg_weighted_distance * 2) / 50  # Средняя скорость 50 км/ч
+        avg_trip_hours = (avg_weighted_distance * 2) / 50
         annual_refrigeration_hours = annual_trips * avg_trip_hours
-
-        # Затраты
         fuel_cost = (annual_distance_km / 100) * vehicle.fuel_consumption_l_per_100km * self.DIESEL_PRICE_RUB_PER_LITER
         maintenance_cost = annual_distance_km * vehicle.maintenance_cost_rub_per_km
         driver_cost = annual_trips * vehicle.driver_cost_rub_per_trip
         insurance_cost = required_trucks * vehicle.insurance_rub_per_year
         refrigeration_cost = annual_refrigeration_hours * vehicle.temperature_control_cost_rub_per_hour
-
         purchase_capex = required_trucks * vehicle.purchase_cost_rub
         lease_opex_annual = required_trucks * vehicle.lease_cost_rub_per_month * 12
-
         print(f"    - Холодная цепь (15т рефр.): {required_trucks} грузовиков, {annual_trips} рейсов/год")
-
         return {
-            'fleet_type': 'refrigerated_truck_15t',
-            'vehicle_name': vehicle.name,
-            'required_count': required_trucks,
-            'annual_trips': annual_trips,
-            'annual_distance_km': annual_distance_km,
+            'fleet_type': 'refrigerated_truck_15t', 'vehicle_name': vehicle.name, 'required_count': required_trucks,
+            'annual_trips': annual_trips, 'annual_distance_km': annual_distance_km,
             'avg_distance_per_trip_km': avg_weighted_distance,
-            'costs': {
-                'fuel_rub': fuel_cost,
-                'maintenance_rub': maintenance_cost,
-                'driver_salaries_rub': driver_cost,
-                'insurance_rub': insurance_cost,
-                'refrigeration_rub': refrigeration_cost,
-                'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost + refrigeration_cost
-            },
-            'capex_purchase_rub': purchase_capex,
-            'opex_lease_rub': lease_opex_annual
+            'costs': {'fuel_rub': fuel_cost, 'maintenance_rub': maintenance_cost, 'driver_salaries_rub': driver_cost,
+                      'insurance_rub': insurance_cost, 'refrigeration_rub': refrigeration_cost,
+                      'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost + refrigeration_cost},
+            'capex_purchase_rub': purchase_capex, 'opex_lease_rub': lease_opex_annual
         }
 
+    # ... (Остальные методы класса без изменений) ...
     def _aggregate_fleet_costs(self, *fleet_data) -> Dict[str, Any]:
         """Агрегирует данные по всему флоту."""
         total_vehicles = sum(f['required_count'] for f in fleet_data)

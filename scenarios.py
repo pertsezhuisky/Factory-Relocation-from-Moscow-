@@ -57,6 +57,11 @@ def generate_scenario_data(base_finance: Dict[str, float]) -> Dict[str, Dict[str
         
         # Расчет итоговых CAPEX и OPEX
         total_capex = base_finance['base_capex'] + params['hr_investment_rub'] + params['automation_investment_rub']
+        
+        # Если мы владеем старым складом, вычитаем его стоимость из CAPEX
+        if config.CURRENT_WAREHOUSE_IS_OWNED:
+            total_capex -= config.CURRENT_WAREHOUSE_SALE_VALUE_RUB
+        
         opex_labor = staff_count * config.OPERATOR_SALARY_RUB_MONTH * 12
         total_opex = base_finance['base_opex'] + opex_labor
 

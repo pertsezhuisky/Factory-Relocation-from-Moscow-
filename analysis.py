@@ -215,68 +215,36 @@ class AvitoCIANScraper:
 class OSRMGeoRouter:
     """
     Бесплатный геороутер на базе OSRM API и Nominatim для геокодирования.
-
-    OSRM (Open Source Routing Machine) - бесплатный API для маршрутизации:
-    - Публичный сервер: https://router.project-osrm.org
-    - Не требует API ключей или регистрации
-    - Формат координат: lon,lat (долгота, широта)
-
-    Nominatim - бесплатный геокодер OpenStreetMap через geopy:
-    - Преобразование адресов в координаты
-    - Требует User-Agent и соблюдения rate limits (1 запрос/сек)
     """
-
-    # Константы координат ключевых точек (формат: lat, lon)
-    CURRENT_HUB_COORDS = (55.857, 37.436)  # Сходненская (текущий склад)
-    SVO_COORDS = (55.97, 37.41)  # Аэропорт Шереметьево
-    AVG_LPU_COORDS = (55.75, 37.62)  # Усредненный клиент ЛПУ (Москва)
-    AVG_CFD_COORDS = (54.51, 36.26)  # Усредненный хаб ЦФО (Калуга/Тула)
-
-    # OSRM API endpoints
+    CURRENT_HUB_COORDS = (55.857, 37.436)
+    SVO_COORDS = (55.97, 37.41)
+    AVG_LPU_COORDS = (55.75, 37.62)
+    AVG_CFD_COORDS = (54.51, 36.26)
     OSRM_BASE_URL = "https://router.project-osrm.org"
 
     def __init__(self, use_geocoding: bool = False):
-        """
-        Инициализация роутера.
-
-        Args:
-            use_geocoding: Использовать ли Nominatim для геокодирования адресов
-        """
         self.use_geocoding = use_geocoding
-
+        # ИЗМЕНЕНИЕ: Добавляем атрибут geolocator в любом случае, но инициализируем его как None
+        self.geolocator: Optional[Nominatim] = None
         if use_geocoding:
-            # Инициализируем геокодер Nominatim
-            # ВАЖНО: Необходимо указать User-Agent для соблюдения правил использования
             self.geolocator = Nominatim(user_agent="warehouse_relocation_analyzer/1.0")
-
-        # Кэш для геокодирования (чтобы не делать повторные запросы)
-        self.geocode_cache = {}
-
-        # Счетчик запросов для rate limiting
+        self.geocode_cache: Dict[str, Optional[Tuple[float, float]]] = {}
         self.last_request_time = 0
-        self.min_request_interval = 1.0  # Минимум 1 секунда между запросами к Nominatim
+        self.min_request_interval = 1.0
 
     def geocode_address(self, address: str) -> Optional[Tuple[float, float]]:
         """
         Преобразует адрес в координаты используя Nominatim (geopy).
-
-        Args:
-            address: Адрес для геокодирования
-
-        Returns:
-            Кортеж (lat, lon) или None если адрес не найден
         """
-        if not self.use_geocoding:
-            print(f"  > [Geocoding] Отключено. Используйте координаты напрямую.")
+        if not self.use_geocoding or self.geolocator is None:
+            print("  > [Geocoding] Отключено. Используйте координаты напрямую.")
             return None
 
-        # Проверяем кэш
         if address in self.geocode_cache:
             print(f"  > [Geocoding Cache] '{address}' -> {self.geocode_cache[address]}")
             return self.geocode_cache[address]
 
         try:
-            # Соблюдаем rate limit (1 запрос/сек для Nominatim)
             elapsed = time.time() - self.last_request_time
             if elapsed < self.min_request_interval:
                 time.sleep(self.min_request_interval - elapsed)
@@ -285,13 +253,15 @@ class OSRMGeoRouter:
             location = self.geolocator.geocode(address, timeout=10)
             self.last_request_time = time.time()
 
-            if location:
+            # Явная проверка на наличие атрибутов, чтобы Pylance был уверен в их существовании
+            if location and hasattr(location, 'latitude') and hasattr(location, 'longitude'):
                 coords = (location.latitude, location.longitude)
                 self.geocode_cache[address] = coords
                 print(f"  > [Nominatim] Найдено: {coords}")
                 return coords
             else:
                 print(f"  > [Nominatim] Адрес не найден: '{address}'")
+                self.geocode_cache[address] = None # Также кэшируем неудачный результат
                 return None
 
         except Exception as e:
@@ -301,160 +271,82 @@ class OSRMGeoRouter:
     def get_route_details(self, start_coords: tuple, end_coords: tuple, mode: str = 'driving') -> dict:
         """
         Получает детали маршрута через OSRM API (бесплатно, без ключей).
-
-        OSRM API формат:
-        GET https://router.project-osrm.org/route/v1/{profile}/{lon1},{lat1};{lon2},{lat2}
-
-        Args:
-            start_coords: Координаты начальной точки (lat, lon)
-            end_coords: Координаты конечной точки (lat, lon)
-            mode: Режим передвижения ('driving', 'car' - только driving поддерживается OSRM)
-
-        Returns:
-            Словарь с данными маршрута:
-            - route_distance_km: Расстояние в километрах
-            - travel_time_h: Время в пути в часах
-            - status: Статус запроса
         """
         lat1, lon1 = start_coords
         lat2, lon2 = end_coords
-
-        # ВАЖНО: OSRM использует формат lon,lat (не lat,lon!)
         osrm_coords = f"{lon1},{lat1};{lon2},{lat2}"
-
-        # Формируем URL для OSRM API
-        # overview=false - не возвращать геометрию маршрута (экономим трафик)
-        # steps=false - не возвращать пошаговые инструкции
         url = f"{self.OSRM_BASE_URL}/route/v1/driving/{osrm_coords}?overview=false&steps=false"
 
         try:
-            # print(f"  > [OSRM API] Запрос маршрута: {start_coords} -> {end_coords}")
-
             response = requests.get(url, timeout=10)
             response.raise_for_status()
-
             data = response.json()
-
             if data['code'] == 'Ok' and len(data['routes']) > 0:
                 route = data['routes'][0]
-
-                # distance в метрах, duration в секундах
-                distance_m = route['distance']
-                duration_s = route['duration']
-
-                # Конвертируем в км и часы
-                distance_km = distance_m / 1000
-                time_h = duration_s / 3600
-
+                distance_km = route['distance'] / 1000
+                time_h = route['duration'] / 3600
                 return {
-                    'route_distance_km': round(distance_km, 2),
-                    'travel_time_h': round(time_h, 2),
-                    'mode': mode,
-                    'status': 'success',
-                    'source': 'OSRM'
+                    'route_distance_km': round(distance_km, 2), 'travel_time_h': round(time_h, 2),
+                    'mode': mode, 'status': 'success', 'source': 'OSRM'
                 }
             else:
                 print(f"  > [OSRM API Error] {data.get('message', 'Unknown error')}")
-                return {
-                    'route_distance_km': 0,
-                    'travel_time_h': 0,
-                    'mode': mode,
-                    'status': 'error',
-                    'source': 'OSRM'
-                }
+                return {'route_distance_km': 0, 'travel_time_h': 0, 'mode': mode, 'status': 'error', 'source': 'OSRM'}
 
         except requests.exceptions.RequestException as e:
             print(f"  > [OSRM API Error] Ошибка запроса: {e}")
-            # Fallback на упрощенный расчет
             return self._fallback_distance_calculation(start_coords, end_coords, mode)
 
     def _fallback_distance_calculation(self, start_coords: tuple, end_coords: tuple, mode: str) -> dict:
         """
         Упрощенный расчет расстояния (fallback на случай недоступности OSRM).
-        Использует формулу гаверсинуса с коэффициентом для дорог.
         """
+        from math import radians, sin, cos, sqrt, atan2
         lat1, lon1 = start_coords
         lat2, lon2 = end_coords
-
-        # Формула Хаверсина для расчета расстояния по прямой
-        from math import radians, sin, cos, sqrt, atan2
-
-        R = 6371.0  # Радиус Земли в км
-        lat1_rad, lon1_rad = radians(lat1), radians(lon1)
-        lat2_rad, lon2_rad = radians(lat2), radians(lon2)
-
-        dlat = lat2_rad - lat1_rad
+        R = 6371.0
+        lat1_rad, lon1_rad, lat2_rad, lon2_rad = map(radians, [lat1, lon1, lat2, lon2])
         dlon = lon2_rad - lon1_rad
-
+        dlat = lat2_rad - lat1_rad
         a = sin(dlat / 2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)**2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        # Расстояние по прямой с коэффициентом 1.3 для учета кривизны дорог
         distance_km = R * c * 1.3
-
-        # Время при средней скорости 50 км/ч
         time_h = distance_km / 50
-
         print(f"  > [Fallback] Используется упрощенный расчет: {distance_km:.1f} км")
-
         return {
-            'route_distance_km': round(distance_km, 2),
-            'travel_time_h': round(time_h, 2),
-            'mode': mode,
-            'status': 'fallback',
-            'source': 'haversine'
+            'route_distance_km': round(distance_km, 2), 'travel_time_h': round(time_h, 2),
+            'mode': mode, 'status': 'fallback', 'source': 'haversine'
         }
 
     def calculate_weighted_annual_distance(self, new_location_coords: tuple) -> dict:
         """
         Рассчитывает взвешенное годовое расстояние S для всех транспортных потоков.
-
-        Args:
-            new_location_coords: Координаты новой локации (lat, lon)
-
-        Returns:
-            Словарь с расстояниями и временем для каждого потока
         """
         print(f"\n  > [OSRMGeoRouter] Расчет взвешенного годового расстояния для локации {new_location_coords}")
-
-        # Потоки и их доли (из документации)
         flows = {
             'CFO': {'coords': self.AVG_CFD_COORDS, 'share': 0.46, 'name': 'ЦФО (собственный флот)'},
             'SVO': {'coords': self.SVO_COORDS, 'share': 0.25, 'name': 'Авиа (Шереметьево)'},
             'LPU': {'coords': self.AVG_LPU_COORDS, 'share': 0.29, 'name': 'Местные ЛПУ (Москва)'}
         }
-
         results = {}
         total_weighted_distance = 0
-
         for flow_id, flow_data in flows.items():
             route = self.get_route_details(new_location_coords, flow_data['coords'])
-
-            # Взвешенное расстояние для этого потока
             weighted_distance = route['route_distance_km'] * flow_data['share']
             total_weighted_distance += weighted_distance
-
             results[flow_id] = {
-                'distance_km': route['route_distance_km'],
-                'time_h': route['travel_time_h'],
-                'share': flow_data['share'],
-                'weighted_distance_km': weighted_distance,
-                'name': flow_data['name'],
-                'source': route.get('source', 'unknown')
+                'distance_km': route['route_distance_km'], 'time_h': route['travel_time_h'], 'share': flow_data['share'],
+                'weighted_distance_km': weighted_distance, 'name': flow_data['name'], 'source': route.get('source', 'unknown')
             }
-
             print(f"    - {flow_data['name']}: {route['route_distance_km']:.1f} км, {route['travel_time_h']:.2f} ч (доля {flow_data['share']*100:.0f}%) [{route.get('source', 'unknown')}]")
-
         results['total_weighted_distance_km'] = total_weighted_distance
         print(f"  > Итоговое взвешенное расстояние: {total_weighted_distance:.1f} км")
-
         return results
 
 
 # ============================================================================
 # СТАРЫЙ КЛАСС (для обратной совместимости, удалить после миграции)
 # ============================================================================
-
 class YandexGeoRouter:
     """
     Имитация API Яндекс.Карт для получения точных дорожных расстояний и времени в пути.
@@ -467,14 +359,25 @@ class YandexGeoRouter:
     AVG_LPU_COORDS = (55.75, 37.62)  # Усредненный клиент ЛПУ (Москва)
     AVG_CFD_COORDS = (54.51, 36.26)  # Усредненный хаб ЦФО (Калуга/Тула)
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, use_geocoding: bool = False):
         """
         Инициализация роутера.
 
         Args:
-            api_key: API ключ Яндекс.Карт (в stub-режиме не используется)
+            use_geocoding: Использовать ли Nominatim для геокодирования адресов
         """
-        self.api_key = api_key or "YOUR_YANDEX_MAPS_API_KEY"
+        self.use_geocoding = use_geocoding
+        # Мы явно указываем, что self.geolocator может быть None, что помогает анализатору
+        self.geolocator: Optional[Nominatim] = None
+        if use_geocoding:
+            self.geolocator = Nominatim(user_agent="warehouse_relocation_analyzer/1.0")
+
+        # Кэш для геокодирования (чтобы не делать повторные запросы)
+        self.geocode_cache: Dict[str, Optional[Tuple[float, float]]] = {}
+
+        # Счетчик запросов для rate limiting
+        self.last_request_time = 0
+        self.min_request_interval = 1.0  # Минимум 1 секунда между запросами к Nominatim
 
     def get_route_details(self, start_coords: tuple, end_coords: tuple, mode: str = 'driving') -> dict:
         """
@@ -593,7 +496,8 @@ class FleetOptimizer:
 
     # Тарифы
     OWN_FLEET_TARIFF_RUB_KM = config.TRANSPORT_TARIFF_RUB_PER_KM # 13.4 руб/км
-    LOCAL_FLEET_TARIFF_RUB_KM = 11.2 # Усредненный тариф для местных перевозок
+    # Используем старый тариф для обратной совместимости, но новый расчет будет в calculate_annual_transport_cost
+    LOCAL_FLEET_TARIFF_RUB_KM = 11.2
 
     def calculate_required_fleet(self) -> int:
         """
@@ -626,8 +530,10 @@ class FleetOptimizer:
         # Затраты на Авиа (доставка в SVO)
         cost_svo = (annual_orders * self.AIR_DELIVERY_SHARE) * avg_dist_svo * self.OWN_FLEET_TARIFF_RUB_KM
 
+        # <--- ИЗМЕНЕННАЯ ЛОГИКА --->
         # Затраты на местные перевозки (наемный транспорт)
-        cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * avg_dist_local * self.LOCAL_FLEET_TARIFF_RUB_KM
+        # Используем новый повышенный тариф из config.py для учета ограничений в Москве
+        cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * avg_dist_local * config.MOSCOW_DELIVERY_TARIFF_RUB_PER_KM
 
         return cost_cfo + cost_svo + cost_local
 
@@ -657,28 +563,25 @@ class FleetOptimizer:
         dist_svo = route_data['SVO']['distance_km']
         dist_lpu = route_data['LPU']['distance_km']
 
-        # Рассчитываем годовые транспортные расходы (T_год) используя тарифы
+        # <--- ИЗМЕНЕННАЯ ЛОГИКА --->
+        # Рассчитываем годовые транспортные расходы (T_год) используя обновленный метод
+        total_annual_transport_cost = self.calculate_annual_transport_cost(dist_cfo, dist_svo, dist_lpu)
+        
+        # Разделяем для отчетности
         annual_orders = self.MONTHLY_ORDERS * 12
-
-        # Затраты на ЦФО (собственный флот, тариф 13.4 руб/км)
         cost_cfo = (annual_orders * self.CFO_OWN_FLEET_SHARE) * dist_cfo * self.OWN_FLEET_TARIFF_RUB_KM
-
-        # Затраты на Авиа (доставка в SVO, тариф 13.4 руб/км)
         cost_svo = (annual_orders * self.AIR_DELIVERY_SHARE) * dist_svo * self.OWN_FLEET_TARIFF_RUB_KM
+        cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * dist_lpu * config.MOSCOW_DELIVERY_TARIFF_RUB_PER_KM
 
-        # Затраты на местные перевозки (наемный транспорт, тариф 11.2 руб/км)
-        cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * dist_lpu * self.LOCAL_FLEET_TARIFF_RUB_KM
 
-        total_annual_transport_cost = cost_cfo + cost_svo + cost_local
-
-        # Рассчитываем необходимый флот
+        # Рассчитываем необходимый флот (логика остается прежней для упрощенной оценки)
         # 1. Грузовики 18-20 тонн для ЦФО (2 рейса/нед)
         cfo_orders_per_month = self.MONTHLY_ORDERS * self.CFO_OWN_FLEET_SHARE
         weeks_in_month = 4.33
         cfo_orders_per_week = cfo_orders_per_month / weeks_in_month
         required_heavy_trucks = math.ceil(cfo_orders_per_week / self.CFO_TRIPS_PER_WEEK_PER_TRUCK)
 
-        # 2. Грузовики 5 тонн для Москвы (ежедневно, 6-8 точек)
+        # 2. Грузовики 5 тонн для Москвы (ежедневно, 6-8 точек) - эта логика будет уточнена в DetailedFleetPlanner
         local_orders_per_day = (self.MONTHLY_ORDERS * self.LOCAL_DELIVERY_SHARE) / 22  # 22 рабочих дня
         points_per_truck = 7  # Среднее между 6 и 8
         required_light_trucks = math.ceil(local_orders_per_day / points_per_truck)
