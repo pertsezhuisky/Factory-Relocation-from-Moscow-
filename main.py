@@ -4,23 +4,25 @@
 Главный исполняемый файл.
 Оркестрирует полный цикл анализа релокации склада: от сбора данных до расчета ROI.
 """
-import pandas as pd
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import math
 
 # Импорт всех необходимых компонентов
 from core.data_model import LocationSpec
 from core.location import WarehouseConfigurator # Используется для расчета расстояний
-from analysis import AvitoParserStub, FleetOptimizer
+from analysis import AvitoParserStub, FleetOptimizer, OSRMGeoRouter
 from scenarios import SCENARIOS_CONFIG # Для расчета Z_перс
 import config
 from simulation_runner import SimulationRunner
+from transport_planner import DetailedFleetPlanner, DockSimulator
 
-def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float):
+def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float,
+                                     fleet_summary: Optional[Dict[str, Any]] = None,
+                                     dock_requirements: Optional[Dict[str, Any]] = None):
     """
     Генерирует текстовое описание детального плана переезда для оптимальной локации.
     """
-    print(f"\n{'='*80}\n[Шаг 6] ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА ДЛЯ ОПТИМАЛЬНОЙ ЛОКАЦИИ: '{location_data['location_name']}'\n{'='*80}")
+    print(f"\n{'='*80}\n[Шаг 7] ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА ДЛЯ ОПТИМАЛЬНОЙ ЛОКАЦИИ: '{location_data['location_name']}'\n{'='*80}")
     print(f"Выбранная локация: {location_data['location_name']}")
     print(f"Тип владения: {'Аренда' if location_data['type'] == 'ARENDA' else 'Покупка/BTS'}")
     print(f"Предложенная площадь: {location_data['area_offered_sqm']} кв.м")
@@ -31,8 +33,26 @@ def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: 
     print(f"  - Годовой OPEX (персонал, мин.): {z_pers_s1:,.0f} руб.")
     print(f"  - Годовой OPEX (транспорт): {location_data['total_annual_transport_cost']:,.0f} руб.")
     print(f"  - Общий годовой OPEX (Сценарий 1): {location_data['total_annual_opex_s1']:,.0f} руб.")
-    print(f"\nЛогистические параметры:")
-    print(f"  - Требуемый собственный флот (ЦФО): {location_data['required_fleet_count']} грузовиков")
+
+    print(f"\nДетальные логистические параметры:")
+    if fleet_summary:
+        print(f"  - Всего единиц транспорта: {fleet_summary['total_vehicles']}")
+        print(f"  - Рекомендация по флоту: {'Аренда' if fleet_summary['recommendation'] == 'lease' else 'Покупка'}")
+        print(f"  - OPEX транспорта (при аренде): {fleet_summary['total_opex_lease']:,.0f} руб/год")
+        print(f"  - CAPEX транспорта (при покупке): {fleet_summary['total_capex_purchase']:,.0f} руб")
+
+        # Детализация по типам транспорта
+        for fleet in fleet_summary['fleet_breakdown']:
+            print(f"    * {fleet['vehicle_name']}: {fleet['required_count']} шт, {fleet['annual_trips']} рейсов/год")
+    else:
+        print(f"  - Требуемый собственный флот (ЦФО, упрощенный расчет): {location_data['required_fleet_count']} грузовиков")
+
+    if dock_requirements:
+        print(f"\nТребования к инфраструктуре доков:")
+        print(f"  - Inbound доков (приемка): {dock_requirements['inbound_docks']}")
+        print(f"  - Outbound доков (отгрузка): {dock_requirements['outbound_docks']}")
+        print(f"  - Пиковая нагрузка: {dock_requirements['peak_trips_per_day']:.1f} рейсов/день")
+        print(f"  - Утилизация доков: {dock_requirements['dock_utilization_percent']:.1f}%")
     print("\nРекомендации для диаграммы Ганта:")
     print("1. Фаза планирования (1-2 месяца):")
     print("   - Детальный анализ выбранной локации, юридическая проверка.")
@@ -122,9 +142,58 @@ def main_multi_location_runner():
     print(f"Минимальный Total_Annual_OPEX (Сценарий 1): {optimal_location['total_annual_opex_s1']:,.0f} руб./год")
     print(f"{'='*80}\n")
 
-    # 5. Детализация Сценариев и SimPy для Оптимальной Локации
-    print(f"\n[Шаг 5] Запуск полного анализа для оптимальной локации: '{optimal_location['location_name']}'")
-    
+    # 5. НОВОЕ: Детальный транспортный анализ для оптимальной локации
+    print(f"\n{'='*80}\n[Шаг 5] ДЕТАЛЬНЫЙ ТРАНСПОРТНЫЙ АНАЛИЗ ОПТИМАЛЬНОЙ ЛОКАЦИИ\n{'='*80}")
+
+    # Используем OSRM для точных расстояний
+    geo_router = OSRMGeoRouter(use_geocoding=False)
+    optimal_coords = (optimal_location['lat'], optimal_location['lon'])
+
+    # Получаем точные расстояния через OSRM
+    route_data = geo_router.calculate_weighted_annual_distance(optimal_coords)
+
+    distances = {
+        'cfo_km': route_data['CFO']['distance_km'],
+        'svo_km': route_data['SVO']['distance_km'],
+        'local_km': route_data['LPU']['distance_km']
+    }
+
+    # Детальный расчет флота
+    detailed_planner = DetailedFleetPlanner()
+    fleet_summary = detailed_planner.calculate_fleet_requirements(distances)
+
+    # Расчет доков
+    dock_requirements = detailed_planner.calculate_dock_requirements(fleet_summary)
+
+    # Генерация графика работы (сохраняем для будущего использования)
+    _ = detailed_planner.generate_transport_schedule(fleet_summary)
+
+    # Проверка достаточности доков
+    dock_sim = DockSimulator(
+        inbound_docks=dock_requirements['inbound_docks'],
+        outbound_docks=dock_requirements['outbound_docks']
+    )
+    dock_simulation = dock_sim.simulate_dock_operations(dock_requirements['peak_trips_per_day'])
+
+    print(f"\n[Проверка достаточности доков]")
+    print(f"  - Утилизация inbound: {dock_simulation['inbound_utilization_percent']:.1f}%")
+    print(f"  - Утилизация outbound: {dock_simulation['outbound_utilization_percent']:.1f}%")
+    if not dock_simulation['is_sufficient']:
+        print(f"  - [!] ПРЕДУПРЕЖДЕНИЕ: Доков недостаточно! Требуется увеличение.")
+    else:
+        print(f"  - [OK] Доков достаточно для текущей нагрузки")
+
+    print(f"\n[Рекомендация по транспорту]")
+    if fleet_summary['recommendation'] == 'lease':
+        print(f"  - РЕКОМЕНДУЕТСЯ: Аренда транспорта")
+        print(f"  - Экономия: {fleet_summary['total_opex_own_fleet'] - fleet_summary['total_opex_lease']:,.0f} руб/год vs покупки")
+    else:
+        print(f"  - РЕКОМЕНДУЕТСЯ: Покупка транспорта")
+        print(f"  - ROI достигается через ~5 лет")
+
+    # 6. Детализация Сценариев и SimPy для Оптимальной Локации
+    print(f"\n{'='*80}\n[Шаг 6] ЗАПУСК SIMPY СИМУЛЯЦИИ ДЛЯ ВСЕХ СЦЕНАРИЕВ\n{'='*80}")
+
     # Создаем LocationSpec для SimulationRunner
     optimal_location_spec = LocationSpec(
         name=optimal_location['location_name'],
@@ -144,8 +213,8 @@ def main_multi_location_runner():
     runner = SimulationRunner(location_spec=optimal_location_spec)
     runner.run_all_scenarios(initial_base_finance=initial_base_finance_for_runner)
 
-    # 6. Вывод Плана Переезда
-    generate_detailed_relocation_plan(optimal_location, z_pers_s1)
+    # 7. Вывод Плана Переезда
+    generate_detailed_relocation_plan(optimal_location, z_pers_s1, fleet_summary, dock_requirements)
 
 if __name__ == "__main__":
     try:

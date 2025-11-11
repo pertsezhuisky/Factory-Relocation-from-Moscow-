@@ -2,3 +2,5 @@ simpy
 pandas
 matplotlib
 seaborn
+requests
+geopy
