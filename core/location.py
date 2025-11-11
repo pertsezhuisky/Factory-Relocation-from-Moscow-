@@ -1,21 +1,41 @@
 # core/location.py
 
 """
-Объединенный модуль для анализа геолокации и связанных с ней финансовых расчетов.
-Он объединил в себе логику из flexible_location_model.py и geo_analyzer.py.
+Модуль для конфигурации склада и расчета базовых финансовых показателей (CAPEX, OPEX).
 """
 from typing import Dict, Tuple
 from math import radians, sin, cos, sqrt, atan2
 
-from core.data_model import LocationSpec
 import config
 
-class LocationAnalyzer:
+class WarehouseConfigurator:
     """
-    Рассчитывает все затраты и метрики, зависящие от физического расположения склада.
+    Рассчитывает базовые CAPEX и OPEX для склада, включая затраты на помещение и оборудование.
     """
-    def __init__(self, spec: LocationSpec):
-        self.spec = spec
+    def __init__(self, ownership_type: str, rent_rate_sqm_year: float, purchase_cost: float, lat: float, lon: float):
+        if ownership_type not in {"ARENDA", "POKUPKA"}:
+            raise ValueError("Неверный тип владения: должен быть 'ARENDA' или 'POKUPKA'")
+        
+        self.ownership_type = ownership_type
+        self.rent_rate_sqm_year = rent_rate_sqm_year
+        self.purchase_cost = purchase_cost
+        self.lat = lat
+        self.lon = lon
+
+    def calculate_fixed_capex(self) -> float:
+        """Рассчитывает обязательные первоначальные инвестиции (CAPEX) для склада."""
+        capex_racking = 50_000_000  # Стеллажное оборудование
+        capex_climate = 250_000_000 # Климатическое оборудование (установка + настройка)
+        return capex_racking + capex_climate
+
+    def calculate_annual_opex(self) -> float:
+        """Рассчитывает годовые операционные расходы (OPEX) на помещение."""
+        total_area = 17000  # Общая площадь в м²
+        if self.ownership_type == "ARENDA":
+            return total_area * self.rent_rate_sqm_year
+        else:  # POKUPKA
+            # Налог/обслуживание как 15% от гипотетической стоимости аренды
+            return (total_area * self.rent_rate_sqm_year) * 0.15
 
     def _haversine_distance(self, p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
         """Расчет расстояния по прямой с коэффициентом на кривизну дорог."""
@@ -34,7 +54,7 @@ class LocationAnalyzer:
     def get_transport_cost_change_rub(self) -> float:
         """Рассчитывает годовое ИЗМЕНЕНИЕ транспортных расходов при переезде."""
         total_dist_increase_km = 0
-        new_hub_coords = (self.spec.lat, self.spec.lon)
+        new_hub_coords = (self.lat, self.lon)
         # Ключевые точки доставки: аэропорт и усредненные центры для ЦФО и Москвы
         key_points = [
             config.KEY_GEO_POINTS["Airport_SVO"],
@@ -59,16 +79,11 @@ class LocationAnalyzer:
         Рассчитывает базовые CAPEX и OPEX, зависящие ТОЛЬКО от локации и типа владения.
         OPEX здесь включает в себя аренду/обслуживание здания и изменение транспортных расходов.
         """
-        base_capex = config.BASE_EQUIPMENT_CAPEX_RUB
-        base_opex_location = 0
+        base_capex = self.calculate_fixed_capex()
+        base_opex_location = self.calculate_annual_opex()
 
-        if self.spec.ownership_type == "ARENDA":
-            base_opex_location = config.WAREHOUSE_TOTAL_AREA_SQM * config.ANNUAL_RENT_PER_SQM_RUB
-        elif self.spec.ownership_type == "POKUPKA":
-            base_capex += config.PURCHASE_BUILDING_COST_RUB
-            base_opex_location = config.MAINTENANCE_COST_OF_OWNED_BUILDING_RUB_YEAR
-        else:
-            raise ValueError("Неверный тип владения: должен быть 'ARENDA' или 'POKUPKA'")
+        if self.ownership_type == "POKUPKA":
+            base_capex += self.purchase_cost
 
         # Суммируем OPEX от локации (аренда/обслуживание) и OPEX от транспорта
         total_base_opex = base_opex_location + self.get_transport_cost_change_rub()

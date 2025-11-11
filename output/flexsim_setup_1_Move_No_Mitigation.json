@@ -1,21 +1,46 @@
 {
-    "Global_Settings": {
-        "Scenario_Name": "1. Move No Mitigation",
-        "location_name": "Логопарк Север-2",
-        "coordinates": {
-            "lat": 56.095,
-            "lon": 37.388
-        }
+    "FINANCIALS": {
+        "Total_CAPEX": 1800000000,
+        "Annual_OPEX": 446217600.0
     },
-    "Resource_Pool": {
-        "Operators": 75,
-        "Automated_Systems": []
+    "LAYOUT": {
+        "Total_Area_SQM": 17000,
+        "Ceiling_Height": 12,
+        "GPP_ZONES": [
+            {
+                "Zone": "Cool_2_8C",
+                "Pallet_Capacity": 3000
+            },
+            {
+                "Zone": "Controlled_15_25C",
+                "Pallet_Capacity": 17000
+            }
+        ]
     },
-    "Process_Times": {
-        "Base_Efficiency_Multiplier": 1.0
+    "RESOURCES": {
+        "Staff_Operators": 75,
+        "Automation_Type": "None",
+        "Processing_Time_Coefficient": 1.0
     },
-    "Throughput_Targets": {
-        "Monthly_Orders_Target": 10000,
-        "Monthly_Orders_Achieved": 10000
+    "LOGISTICS": {
+        "Location_Coords": [
+            55.4,
+            37.58
+        ],
+        "Required_Own_Fleet_Count": 532,
+        "Delivery_Flows": [
+            {
+                "Dest": "SVO_Aviation",
+                "Volume_Pct": 25.0
+            },
+            {
+                "Dest": "CFD_Own_Fleet",
+                "Volume_Pct": 46.0
+            },
+            {
+                "Dest": "Moscow_LPU",
+                "Volume_Pct": 28.999999999999996
+            }
+        ]
     }
 }

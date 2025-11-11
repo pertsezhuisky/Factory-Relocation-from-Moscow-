@@ -5,11 +5,12 @@ import os
 
 # Импорт модулей ядра и настроек
 from core.data_model import LocationSpec, ScenarioResult
-from core.location import LocationAnalyzer
+from core.location import WarehouseConfigurator
 from core.simulation_engine import WarehouseSimulator
-from core.flexsim_bridge import FlexsimBridge
+from core.flexsim_bridge import FlexSimAPIBridge
 import config
-from scenarios import SCENARIOS_CONFIG
+from analysis import FleetOptimizer
+from scenarios import generate_scenario_data
 
 class SimulationRunner:
     """
@@ -20,8 +21,9 @@ class SimulationRunner:
     def __init__(self, location_spec: LocationSpec):
         self.location_spec = location_spec
         # Инициализируем все необходимые нам "инструменты"
-        self.location_analyzer = LocationAnalyzer(location_spec)
-        self.flexsim_bridge = FlexsimBridge(config.OUTPUT_DIR)
+        self.location_analyzer = WarehouseConfigurator(location_spec.ownership_type, config.ANNUAL_RENT_PER_SQM_RUB, config.PURCHASE_BUILDING_COST_RUB, location_spec.lat, location_spec.lon)
+        self.fleet_optimizer = FleetOptimizer()
+        self.flexsim_bridge = FlexSimAPIBridge(config.OUTPUT_DIR)
         # Готовим пустой список для сбора итоговых результатов
         self.results: List[ScenarioResult] = []
 
@@ -31,57 +33,96 @@ class SimulationRunner:
         
         # 1. Сначала рассчитываем базовые финансовые показатели, зависящие только от локации
         base_finance = self.location_analyzer.get_base_financials()
+        
+        # 2. Генерируем полные данные для всех сценариев
+        all_scenarios = generate_scenario_data(base_finance)
+
+        # --- Демонстрация для Сценария 2 и 4 ---
+        print("\n--- Демонстрация сгенерированных данных ---")
+        s2_data = all_scenarios.get("2_Move_With_Compensation")
+        s4_data = all_scenarios.get("4_Move_Advanced_Automation")
+        print(f"Сценарий 2 ('{s2_data['name']}'):")
+        print(f"  - Персонал: {s2_data['staff_count']} чел.")
+        print(f"  - Эффективность: x{s2_data['processing_efficiency']}")
+        print(f"  - Итоговый CAPEX: {s2_data['total_capex']:,.0f} руб.")
+        print(f"  - Итоговый OPEX: {s2_data['total_opex']:,.0f} руб.")
+        print(f"Сценарий 4 ('{s4_data['name']}'):")
+        print(f"  - Персонал: {s4_data['staff_count']} чел.")
+        print(f"  - Эффективность: x{s4_data['processing_efficiency']}")
+        print(f"  - Итоговый CAPEX: {s4_data['total_capex']:,.0f} руб.")
+        print(f"  - Итоговый OPEX: {s4_data['total_opex']:,.0f} руб.")
+        print("-------------------------------------------\n")
+
         baseline_annual_opex = 0  # OPEX базового сценария для расчета экономии
 
-        # 2. Проходим в цикле по каждому сценарию
-        for key, params in SCENARIOS_CONFIG.items():
-            print(f"\n--- Обработка сценария: {params['name']} ---")
+        # 3. Проходим в цикле по каждому сценарию
+        for key, scenario_data in all_scenarios.items():
+            print(f"\n--- Обработка сценария: {scenario_data['name']} ---")
 
-            # 3. Расчет персонала
-            staff_count = math.floor(config.INITIAL_STAFF_COUNT * (1 - params['staff_attrition_rate']))
-            
-            # 4. Запуск SimPy симуляции для получения операционных KPI
-            print(f"  > Запуск SimPy с {staff_count} чел. и эффективностью x{params['efficiency_multiplier']}...")
-            sim = WarehouseSimulator(staff_count, params['efficiency_multiplier'])
+            # 4. Запуск SimPy симуляции
+            print(f"  > Запуск SimPy с {scenario_data['staff_count']} чел. и эффективностью x{scenario_data['processing_efficiency']}...")
+            sim = WarehouseSimulator(scenario_data['staff_count'], scenario_data['processing_efficiency'])
             sim_kpi = sim.run()
             print(f"  > SimPy завершен. Обработано заказов: {sim_kpi['achieved_throughput']}")
 
-            # 5. Расчет итоговых финансовых KPI для этого сценария
-            total_capex = base_finance['base_capex'] + params['hr_investment_rub'] + params['automation_investment_rub']
-            opex_labor = staff_count * config.OPERATOR_SALARY_RUB_MONTH * 12
-            total_opex = base_finance['base_opex'] + opex_labor
-
             # Запоминаем OPEX первого ("базового") сценария
             if 'No_Mitigation' in key:
-                baseline_annual_opex = total_opex
+                baseline_annual_opex = scenario_data['total_opex']
             
-            # 6. Расчет срока окупаемости для сценариев с автоматизацией
-            payback = float('nan') # По умолчанию "не число", т.е. неприменимо
-            if params['automation_investment_rub'] > 0 and baseline_annual_opex > 0:
-                annual_savings = baseline_annual_opex - total_opex
-                if annual_savings > 0:
-                    payback = round(params['automation_investment_rub'] / annual_savings, 2)
+            # 5. Имитация получения KPI от FlexSim
+            flexsim_kpi = self.flexsim_bridge.receive_kpi()
+            # Здесь можно было бы использовать flexsim_kpi['achieved_throughput'],
+            # но для консистентности продолжим использовать KPI из нашей SimPy модели.
             
-            # 7. Сборка всех KPI в единую структуру данных
+            # 6. Финальный расчет окупаемости (ROI / Payback Period)
+            payback = self.calculate_roi(scenario_data)
+            if payback is not None:
+                print(f"  > Расчетный срок окупаемости: {payback:.2f} лет")
+
+            # 6. Сборка всех KPI в единую структуру данных
             result = ScenarioResult(
                 location_name=self.location_spec.name,
-                scenario_name=params['name'],
-                staff_count=staff_count,
+                scenario_name=scenario_data['name'],
+                staff_count=scenario_data['staff_count'],
                 throughput_orders=int(sim_kpi['achieved_throughput']),
                 avg_cycle_time_min=int(sim_kpi['avg_cycle_time_min']),
-                total_annual_opex_rub=int(total_opex),
-                total_capex_rub=int(total_capex),
-                payback_period_years=payback
+                total_annual_opex_rub=int(scenario_data['total_opex']),
+                total_capex_rub=int(scenario_data['total_capex']),
+                payback_period_years=payback if payback is not None else float('nan')
             )
             # Добавляем результат в общий список
             self.results.append(result)
             
-            # 8. Генерация JSON-файла для FlexSim
-            self.flexsim_bridge.generate_json_config(self.location_spec, result, params)
+            # 7. Генерация JSON-файла для FlexSim
+            self.flexsim_bridge.generate_json_config(self.location_spec, scenario_data, self.fleet_optimizer)
 
         # 9. После завершения цикла сохраняем сводный CSV-файл
         self._save_summary_csv()
         print(f"\n--- Анализ для локации '{self.location_spec.name}' завершен. ---")
+
+    def calculate_roi(self, scenario_data: dict) -> float | None:
+        """
+        Рассчитывает срок окупаемости (Payback Period) для сценария.
+        Сравнивает OPEX нового склада с OPEX текущего склада в Москве.
+        """
+        # 1. Расчет OPEX текущего склада (Baseline)
+        # Аренда в Москве: 12000 руб/м2/год (1000 руб/м2/мес * 12)
+        current_rent_opex = 12000 * config.WAREHOUSE_TOTAL_AREA_SQM
+        # Зарплаты в Москве (без сокращений)
+        current_labor_opex = config.INITIAL_STAFF_COUNT * config.OPERATOR_SALARY_RUB_MONTH * 12
+        # Транспортные расходы считаем нулевыми (это наша база для сравнения)
+        total_baseline_opex = current_rent_opex + current_labor_opex
+
+        # 2. OPEX нового сценария (уже рассчитан)
+        new_scenario_opex = scenario_data['total_opex']
+
+        # 3. Расчет годовой экономии
+        annual_savings = total_baseline_opex - new_scenario_opex
+
+        if annual_savings > 0:
+            payback_period_years = scenario_data['total_capex'] / annual_savings
+            return payback_period_years
+        return None # Окупаемости нет, если экономия не положительная
 
     def _save_summary_csv(self):
         """Сохраняет сводный CSV-файл со всеми результатами."""
