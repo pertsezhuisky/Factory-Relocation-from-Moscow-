@@ -342,25 +342,24 @@ def main_multi_location_runner():
         'total_sku': 15_000
     }
 
-    # 8. Валидация модели (временно отключена по запросу пользователя)
+    # 8. Валидация модели
     print("\n" + "+"*120)
-    print("[ШАГ 8] ВАЛИДАЦИЯ И ВЕРИФИКАЦИЯ МОДЕЛИ (пропущено)")
+    print("[ШАГ 8] ВАЛИДАЦИЯ И ВЕРИФИКАЦИЯ МОДЕЛИ")
     print("+"*120)
-    print("\n[INFO] Валидация отключена. Включите вручную при необходимости.")
 
-    # validation_results = run_full_validation(
-    #     location_data=optimal_location,
-    #     warehouse_data=warehouse_validation_data,
-    #     roi_data=warehouse_analyzer.roi_data,
-    #     automation_scenarios=warehouse_analyzer.automation_scenarios
-    # )
-    #
-    # print(f"\n[Результаты валидации]")
-    # print(f"  Всего проверок: {len(validation_results['validation_results'])}")
-    # print(f"  Критических ошибок: {validation_results['critical_failures']}")
-    # print(f"  Предупреждений: {validation_results['warnings']}")
-    # print(f"  Отчет сохранен: {validation_results['report_path']}")
-    # print(f"  Общий балл: {validation_results['verification_results']['overall_score']:.1f}/100")
+    validation_results = run_full_validation(
+        location_data=optimal_location,
+        warehouse_data=warehouse_validation_data,
+        roi_data=warehouse_analyzer.roi_data,
+        automation_scenarios=warehouse_analyzer.automation_scenarios
+    )
+
+    print(f"\n[Результаты валидации]")
+    print(f"  Всего проверок: {len(validation_results['validation_results'])}")
+    print(f"  Критических ошибок: {validation_results['critical_failures']}")
+    print(f"  Предупреждений: {validation_results['warnings']}")
+    print(f"  Отчет сохранен: {validation_results['report_path']}")
+    print(f"  Общий балл: {validation_results['verification_results']['overall_score']:.1f}/100")
 
     # 9. Вывод плана переезда
     print("\n" + "+"*120)
@@ -375,10 +374,14 @@ def main_multi_location_runner():
     print("\nВсе файлы сохранены в директории 'output/':")
     print("  * warehouse_layout_detailed.png - Планировка склада с зонами")
     print("  * automation_comparison_detailed.png - Сравнение сценариев автоматизации")
-    print("  * warehouse_analysis_report.xlsx - Полный Excel отчет")
-    print("  * validation_report.xlsx - Отчет валидации модели")
+    print("  * warehouse_analysis_report.xlsx - Полный Excel отчет (9 вкладок)")
+    print("  * validation_report.xlsx - Отчет валидации модели (до 7 вкладок)")
+    print("  * validation_report_visualizations.png - Визуализация результатов валидации")
     print("  * roi_comparison_animated.gif - Анимация сравнения ROI")
     print("  * payback_period_animated.gif - Анимация срока окупаемости")
+    print("  * distance_calculation_*.png - Визуализация расчета расстояний для локаций")
+    print("  * location_comparison.png - Сравнение всех локаций")
+    print("  * capex_opex_breakdown_*.png - Разбивка CAPEX/OPEX для оптимальной локации")
     print("="*120)
 
 

@@ -7,6 +7,8 @@ import os
 from typing import Dict, Any, List, Tuple
 from dataclasses import dataclass
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import config
 
 
@@ -298,12 +300,12 @@ class ModelValidator:
         if location_data.get('location_name'):
             objectives['find_optimal_location'] = True
             scores['location_selection'] = 100
-            print(f"\n✓ Цель 1: Найти оптимальную локацию")
+            print(f"\n+ Цель 1: Найти оптимальную локацию")
             print(f"  Статус: ВЫПОЛНЕНО")
             print(f"  Выбрана локация: {location_data['location_name']}")
         else:
             scores['location_selection'] = 0
-            print(f"\n✗ Цель 1: Найти оптимальную локацию")
+            print(f"\n- Цель 1: Найти оптимальную локацию")
             print(f"  Статус: НЕ ВЫПОЛНЕНО")
 
         # 2. Минимизировать OPEX
@@ -313,14 +315,14 @@ class ModelValidator:
         if actual_opex <= target_opex:
             objectives['minimize_opex'] = True
             scores['opex_optimization'] = min(100, (target_opex / actual_opex) * 100)
-            print(f"\n✓ Цель 2: Минимизировать OPEX")
+            print(f"\n+ Цель 2: Минимизировать OPEX")
             print(f"  Статус: ВЫПОЛНЕНО")
             print(f"  Целевой OPEX: {target_opex:,.0f} руб/год")
             print(f"  Фактический OPEX: {actual_opex:,.0f} руб/год")
             print(f"  Эффективность: {scores['opex_optimization']:.1f}%")
         else:
             scores['opex_optimization'] = (target_opex / actual_opex) * 100
-            print(f"\n⚠ Цель 2: Минимизировать OPEX")
+            print(f"\n\! Цель 2: Минимизировать OPEX")
             print(f"  Статус: ЧАСТИЧНО ВЫПОЛНЕНО")
             print(f"  Целевой OPEX: {target_opex:,.0f} руб/год")
             print(f"  Фактический OPEX: {actual_opex:,.0f} руб/год")
@@ -332,13 +334,13 @@ class ModelValidator:
             if best_roi > 20:  # Минимальный ROI 20% за 5 лет
                 objectives['achieve_automation'] = True
                 scores['automation_efficiency'] = min(100, (best_roi / 50) * 100)
-                print(f"\n✓ Цель 3: Достичь оптимального уровня автоматизации")
+                print(f"\n+ Цель 3: Достичь оптимального уровня автоматизации")
                 print(f"  Статус: ВЫПОЛНЕНО")
                 print(f"  Лучший ROI за 5 лет: {best_roi:.1f}%")
                 print(f"  Эффективность: {scores['automation_efficiency']:.1f}%")
             else:
                 scores['automation_efficiency'] = (best_roi / 50) * 100
-                print(f"\n⚠ Цель 3: Достичь оптимального уровня автоматизации")
+                print(f"\n\! Цель 3: Достичь оптимального уровня автоматизации")
                 print(f"  Статус: ТРЕБУЕТ УЛУЧШЕНИЯ")
                 print(f"  Лучший ROI за 5 лет: {best_roi:.1f}%")
         else:
@@ -349,25 +351,25 @@ class ModelValidator:
         if warehouse_data:
             objectives['ensure_scalability'] = True
             scores['scalability'] = 100
-            print(f"\n✓ Цель 4: Обеспечить масштабируемость")
+            print(f"\n+ Цель 4: Обеспечить масштабируемость")
             print(f"  Статус: ВЫПОЛНЕНО")
             print(f"  Целевая мощность: {target_capacity:,.0f} заказов/месяц")
             print(f"  Резерв мощности: 50%")
         else:
             scores['scalability'] = 50
-            print(f"\n⚠ Цель 4: Обеспечить масштабируемость")
+            print(f"\n\! Цель 4: Обеспечить масштабируемость")
             print(f"  Статус: ТРЕБУЕТ АНАЛИЗА")
 
         # 5. Поддержать качество (GPP/GDP)
         if location_data.get('current_class') in ['A', 'A_requires_mod', 'A_verified']:
             objectives['maintain_quality'] = True
             scores['quality_standards'] = 100
-            print(f"\n✓ Цель 5: Поддержать стандарты качества (GPP/GDP)")
+            print(f"\n+ Цель 5: Поддержать стандарты качества (GPP/GDP)")
             print(f"  Статус: ВЫПОЛНЕНО")
             print(f"  Класс помещения: {location_data['current_class']}")
         else:
             scores['quality_standards'] = 50
-            print(f"\n⚠ Цель 5: Поддержать стандарты качества (GPP/GDP)")
+            print(f"\n\! Цель 5: Поддержать стандарты качества (GPP/GDP)")
             print(f"  Статус: ТРЕБУЕТ МОДИФИКАЦИЙ")
 
         # 6. Соблюсти бюджет
@@ -379,13 +381,13 @@ class ModelValidator:
         if total_capex <= config.MAX_TOTAL_CAPEX_RUB:
             objectives['meet_budget'] = True
             scores['budget_compliance'] = 100
-            print(f"\n✓ Цель 6: Соблюсти бюджетные ограничения")
+            print(f"\n+ Цель 6: Соблюсти бюджетные ограничения")
             print(f"  Статус: ВЫПОЛНЕНО")
             print(f"  Макс. бюджет: {config.MAX_TOTAL_CAPEX_RUB:,.0f} руб")
             print(f"  Фактический CAPEX: {total_capex:,.0f} руб")
         else:
             scores['budget_compliance'] = (config.MAX_TOTAL_CAPEX_RUB / total_capex) * 100
-            print(f"\n⚠ Цель 6: Соблюсти бюджетные ограничения")
+            print(f"\n\! Цель 6: Соблюсти бюджетные ограничения")
             print(f"  Статус: ПРЕВЫШЕНИЕ БЮДЖЕТА")
             print(f"  Макс. бюджет: {config.MAX_TOTAL_CAPEX_RUB:,.0f} руб")
             print(f"  Фактический CAPEX: {total_capex:,.0f} руб")
@@ -411,12 +413,18 @@ class ModelValidator:
             'overall_score': overall_score
         }
 
-    def generate_validation_report(self, output_path: str = None) -> str:
+    def generate_validation_report(self, output_path: str = None,
+                                   location_data: Dict[str, Any] = None,
+                                   warehouse_data: Dict[str, Any] = None,
+                                   roi_data: Dict[str, Any] = None) -> str:
         """
-        Генерирует отчет по валидации в Excel.
+        Генерирует расширенный отчет по валидации в Excel с визуализациями.
 
         Args:
             output_path: Путь для сохранения отчета
+            location_data: Данные локации (для детальных сравнений)
+            warehouse_data: Данные склада (для детальных сравнений)
+            roi_data: Данные ROI (для детальных сравнений)
 
         Returns:
             Путь к сохраненному файлу
@@ -424,9 +432,9 @@ class ModelValidator:
         if output_path is None:
             output_path = os.path.join(config.OUTPUT_DIR, "validation_report.xlsx")
 
-        print(f"\n[Отчет] Создание отчета валидации: {output_path}")
+        print(f"\n[Отчет] Создание расширенного отчета валидации: {output_path}")
 
-        # Подготовка данных
+        # Подготовка основных данных
         data = []
         for result in self.validation_results:
             data.append({
@@ -451,17 +459,339 @@ class ModelValidator:
         }
         summary_df = pd.DataFrame(summary_data)
 
+        # Подготовка дополнительных вкладок
+        excel_sheets = {
+            'Сводка': summary_df,
+            'Детали валидации': df,
+            'По категориям': self._prepare_category_breakdown(),
+            'По критичности': self._prepare_severity_breakdown(),
+        }
+
+        # Добавляем сравнительные данные, если они доступны
+        if location_data:
+            excel_sheets['Сравнение локации'] = self._prepare_location_comparison(location_data)
+
+        if warehouse_data:
+            excel_sheets['Сравнение склада'] = self._prepare_warehouse_comparison(warehouse_data)
+
+        if roi_data:
+            excel_sheets['Сравнение ROI'] = self._prepare_roi_comparison(roi_data)
+
         # Запись в Excel
         try:
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-                summary_df.to_excel(writer, sheet_name='Сводка', index=False)
-                df.to_excel(writer, sheet_name='Детали валидации', index=False)
+                for sheet_name, sheet_df in excel_sheets.items():
+                    sheet_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
             print(f"[Отчет] Сохранен: {output_path}")
+            print(f"[Отчет] Количество вкладок: {len(excel_sheets)}")
         except Exception as e:
             print(f"[Ошибка] Не удалось сохранить отчет: {e}")
             output_path = None
 
+        # Генерация визуализаций
+        if output_path:
+            viz_path = output_path.replace('.xlsx', '_visualizations.png')
+            self._generate_validation_visualizations(viz_path)
+
         return output_path
+
+    def _prepare_category_breakdown(self) -> pd.DataFrame:
+        """Подготавливает разбивку результатов по категориям."""
+        # Группировка проверок по категориям (извлекаем из имени проверки)
+        category_stats = {}
+
+        for result in self.validation_results:
+            # Определяем категорию из имени проверки
+            if 'площад' in result.check_name.lower():
+                category = 'Площадь и размеры'
+            elif 'координат' in result.check_name.lower():
+                category = 'Географическое расположение'
+            elif 'capex' in result.check_name.lower() or 'инвестиц' in result.check_name.lower():
+                category = 'CAPEX и инвестиции'
+            elif 'opex' in result.check_name.lower() or 'операцион' in result.check_name.lower():
+                category = 'OPEX и операционные расходы'
+            elif 'транспорт' in result.check_name.lower():
+                category = 'Транспорт и логистика'
+            elif 'класс' in result.check_name.lower() or 'gpp' in result.check_name.lower() or 'gdp' in result.check_name.lower():
+                category = 'GPP/GDP соответствие'
+            elif 'зон' in result.check_name.lower():
+                category = 'Зонирование'
+            elif 'стеллаж' in result.check_name.lower() or 'вместимост' in result.check_name.lower():
+                category = 'Вместимость и хранение'
+            elif 'док' in result.check_name.lower():
+                category = 'Доки'
+            elif 'климат' in result.check_name.lower() or 'температур' in result.check_name.lower():
+                category = 'Климатические системы'
+            elif 'мониторинг' in result.check_name.lower():
+                category = 'Мониторинг'
+            elif 'roi' in result.check_name.lower() or 'окупаем' in result.check_name.lower():
+                category = 'ROI и окупаемость'
+            elif 'персонал' in result.check_name.lower() or 'сокращение' in result.check_name.lower():
+                category = 'Персонал'
+            elif 'throughput' in result.check_name.lower() or 'производительност' in result.check_name.lower():
+                category = 'Производительность'
+            elif 'бюджет' in result.check_name.lower():
+                category = 'Бюджетные ограничения'
+            else:
+                category = 'Прочее'
+
+            if category not in category_stats:
+                category_stats[category] = {
+                    'Всего проверок': 0,
+                    'Пройдено': 0,
+                    'Провалено': 0,
+                    'Критических': 0,
+                    'Предупреждений': 0,
+                    'Информационных': 0
+                }
+
+            category_stats[category]['Всего проверок'] += 1
+            if result.passed:
+                category_stats[category]['Пройдено'] += 1
+            else:
+                category_stats[category]['Провалено'] += 1
+
+            if result.severity == 'critical':
+                category_stats[category]['Критических'] += 1
+            elif result.severity == 'warning':
+                category_stats[category]['Предупреждений'] += 1
+            else:
+                category_stats[category]['Информационных'] += 1
+
+        # Преобразуем в DataFrame
+        data = []
+        for category, stats in category_stats.items():
+            row = {'Категория': category}
+            row.update(stats)
+            data.append(row)
+
+        return pd.DataFrame(data)
+
+    def _prepare_severity_breakdown(self) -> pd.DataFrame:
+        """Подготавливает разбивку по уровням критичности."""
+        severity_map = {'critical': 'Критические', 'warning': 'Предупреждения', 'info': 'Информационные'}
+
+        severity_stats = {
+            'critical': {'Всего': 0, 'Пройдено': 0, 'Провалено': 0},
+            'warning': {'Всего': 0, 'Пройдено': 0, 'Провалено': 0},
+            'info': {'Всего': 0, 'Пройдено': 0, 'Провалено': 0}
+        }
+
+        for result in self.validation_results:
+            severity_stats[result.severity]['Всего'] += 1
+            if result.passed:
+                severity_stats[result.severity]['Пройдено'] += 1
+            else:
+                severity_stats[result.severity]['Провалено'] += 1
+
+        data = []
+        for severity, label in severity_map.items():
+            row = {'Критичность': label}
+            row.update(severity_stats[severity])
+            data.append(row)
+
+        return pd.DataFrame(data)
+
+    def _prepare_location_comparison(self, location_data: Dict[str, Any]) -> pd.DataFrame:
+        """Подготавливает сравнительную таблицу параметров локации."""
+        data = []
+
+        comparisons = [
+            {
+                'Параметр': 'Площадь (кв.м)',
+                'Минимальное требование': f"{config.MIN_AREA_SQM:,.0f}",
+                'Целевое значение': f"{config.TARGET_AREA_SQM:,.0f}",
+                'Фактическое': f"{location_data.get('area_offered_sqm', 0):,.0f}",
+                'Соответствие': 'Да' if location_data.get('area_offered_sqm', 0) >= config.MIN_AREA_SQM else 'Нет'
+            },
+            {
+                'Параметр': 'CAPEX (руб)',
+                'Минимальное требование': '0',
+                'Целевое значение': f"{config.MAX_TOTAL_CAPEX_RUB:,.0f}",
+                'Фактическое': f"{location_data.get('total_initial_capex', 0):,.0f}",
+                'Соответствие': 'Да' if location_data.get('total_initial_capex', 0) <= config.MAX_TOTAL_CAPEX_RUB else 'Нет'
+            },
+            {
+                'Параметр': 'Годовой OPEX (руб)',
+                'Минимальное требование': '0',
+                'Целевое значение': f"{config.MAX_ANNUAL_OPEX_RUB:,.0f}",
+                'Фактическое': f"{location_data.get('total_annual_opex_s1', 0):,.0f}",
+                'Соответствие': 'Да' if location_data.get('total_annual_opex_s1', 0) <= config.MAX_ANNUAL_OPEX_RUB else 'Нет'
+            },
+            {
+                'Параметр': 'Транспортные расходы (руб/год)',
+                'Минимальное требование': '0',
+                'Целевое значение': '100,000,000',
+                'Фактическое': f"{location_data.get('total_annual_transport_cost', 0):,.0f}",
+                'Соответствие': 'Да' if location_data.get('total_annual_transport_cost', 0) <= 100_000_000 else 'Нет'
+            },
+            {
+                'Параметр': 'Класс помещения',
+                'Минимальное требование': 'Класс A',
+                'Целевое значение': 'Класс A',
+                'Фактическое': location_data.get('current_class', 'Не указан'),
+                'Соответствие': 'Да' if location_data.get('current_class') in ['A', 'A_verified', 'A_requires_mod'] else 'Нет'
+            }
+        ]
+
+        return pd.DataFrame(comparisons)
+
+    def _prepare_warehouse_comparison(self, warehouse_data: Dict[str, Any]) -> pd.DataFrame:
+        """Подготавливает сравнительную таблицу параметров склада."""
+        data = []
+
+        zoning_data = warehouse_data.get('zoning_data', {})
+        equipment_data = warehouse_data.get('equipment_data', {})
+        total_sku = warehouse_data.get('total_sku', config.TOTAL_SKU_COUNT)
+
+        # Вместимость
+        total_positions = equipment_data.get('total_pallet_positions', 0)
+        required_positions = total_sku * 2
+
+        data.append({
+            'Параметр': 'Паллето-мест',
+            'Минимальное требование': f"{required_positions:,.0f}",
+            'Фактическое': f"{total_positions:,.0f}",
+            'Отклонение': f"{total_positions - required_positions:,.0f}",
+            'Соответствие': 'Да' if total_positions >= required_positions else 'Нет'
+        })
+
+        # Доки
+        total_docks = equipment_data.get('inbound_docks', 0) + equipment_data.get('outbound_docks', 0)
+        min_docks = 10
+
+        data.append({
+            'Параметр': 'Количество доков',
+            'Минимальное требование': f"{min_docks}",
+            'Фактическое': f"{total_docks}",
+            'Отклонение': f"{total_docks - min_docks}",
+            'Соответствие': 'Да' if total_docks >= min_docks else 'Нет'
+        })
+
+        # Зонирование - доля хранения
+        if zoning_data:
+            storage_zones = ['storage_normal', 'storage_cold']
+            total_storage = sum(zone.area_sqm for zone_name, zone in zoning_data.items() if zone_name in storage_zones)
+            total_area = sum(zone.area_sqm for zone in zoning_data.values())
+            storage_ratio = (total_storage / total_area) * 100 if total_area > 0 else 0
+
+            data.append({
+                'Параметр': 'Доля зон хранения (%)',
+                'Минимальное требование': '75',
+                'Фактическое': f"{storage_ratio:.1f}",
+                'Отклонение': f"{storage_ratio - 75:.1f}",
+                'Соответствие': 'Да' if storage_ratio >= 75 else 'Нет'
+            })
+
+        return pd.DataFrame(data)
+
+    def _prepare_roi_comparison(self, roi_data: Dict[str, Any]) -> pd.DataFrame:
+        """Подготавливает сравнительную таблицу ROI по сценариям."""
+        data = []
+
+        for level_value, roi_info in roi_data.items():
+            data.append({
+                'Сценарий': roi_info['scenario_name'],
+                'CAPEX (руб)': f"{roi_info['capex']:,.0f}",
+                'Годовая выгода (руб)': f"{roi_info['net_annual_benefit']:,.0f}",
+                'Срок окупаемости (лет)': f"{roi_info['payback_years']:.2f}" if roi_info['payback_years'] != float('inf') else 'Не окупается',
+                'ROI за 5 лет (%)': f"{roi_info['roi_5y_percent']:.1f}",
+                'Сокращение персонала (чел)': roi_info['reduced_staff'],
+                'Рост throughput (%)': f"{(roi_info['annual_revenue_increase'] / (config.TARGET_ORDERS_MONTH * 12 * 500) * 100):.1f}" if config.TARGET_ORDERS_MONTH > 0 else "0.0",
+                'Оценка': self._evaluate_roi(roi_info['roi_5y_percent'], roi_info['payback_years'])
+            })
+
+        return pd.DataFrame(data)
+
+    def _evaluate_roi(self, roi_5y: float, payback_years: float) -> str:
+        """Оценивает качество ROI."""
+        if roi_5y >= 100 and payback_years <= 3:
+            return 'Отлично'
+        elif roi_5y >= 50 and payback_years <= 5:
+            return 'Хорошо'
+        elif roi_5y >= 20 and payback_years <= 7:
+            return 'Приемлемо'
+        elif roi_5y >= 0:
+            return 'Низкая эффективность'
+        else:
+            return 'Убыточно'
+
+    def _generate_validation_visualizations(self, output_path: str):
+        """Генерирует визуализации результатов валидации."""
+        print(f"\n[Визуализация] Создание графиков валидации: {output_path}")
+
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+        fig.suptitle('Результаты валидации и верификации модели', fontsize=16, fontweight='bold')
+
+        # График 1: Общая статистика
+        categories = ['Пройдено', 'Провалено']
+        passed = sum(1 for r in self.validation_results if r.passed)
+        failed = sum(1 for r in self.validation_results if not r.passed)
+        values = [passed, failed]
+        colors = ['green', 'red']
+
+        ax1.bar(categories, values, color=colors, alpha=0.7)
+        ax1.set_ylabel('Количество проверок', fontsize=11)
+        ax1.set_title('Общая статистика валидации', fontsize=12, fontweight='bold')
+        ax1.grid(True, alpha=0.3, axis='y')
+
+        # Добавляем значения на столбцы
+        for i, v in enumerate(values):
+            ax1.text(i, v + 0.5, str(v), ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+        # График 2: По уровню критичности
+        severity_counts = {
+            'Критические': self.critical_failures,
+            'Предупреждения': self.warnings,
+            'Информационные': self.info_count
+        }
+        colors_severity = ['red', 'orange', 'blue']
+
+        ax2.bar(severity_counts.keys(), severity_counts.values(), color=colors_severity, alpha=0.7)
+        ax2.set_ylabel('Количество', fontsize=11)
+        ax2.set_title('Распределение по критичности', fontsize=12, fontweight='bold')
+        ax2.grid(True, alpha=0.3, axis='y')
+
+        # График 3: Проходимость по категориям
+        category_df = self._prepare_category_breakdown()
+        if not category_df.empty:
+            top_categories = category_df.nlargest(8, 'Всего проверок')
+
+            x = range(len(top_categories))
+            width = 0.35
+
+            ax3.bar([i - width/2 for i in x], top_categories['Пройдено'], width, label='Пройдено', color='green', alpha=0.7)
+            ax3.bar([i + width/2 for i in x], top_categories['Провалено'], width, label='Провалено', color='red', alpha=0.7)
+
+            ax3.set_xlabel('Категории', fontsize=11)
+            ax3.set_ylabel('Количество проверок', fontsize=11)
+            ax3.set_title('Результаты по категориям (топ-8)', fontsize=12, fontweight='bold')
+            ax3.set_xticks(x)
+            ax3.set_xticklabels(top_categories['Категория'], rotation=45, ha='right', fontsize=9)
+            ax3.legend()
+            ax3.grid(True, alpha=0.3, axis='y')
+
+        # График 4: Круговая диаграмма общего статуса
+        total_checks = len(self.validation_results)
+        success_rate = (passed / total_checks * 100) if total_checks > 0 else 0
+
+        colors_pie = ['green' if passed > failed else 'red', 'lightgray']
+        explode = (0.1, 0)
+
+        ax4.pie([passed, failed], explode=explode, labels=['Пройдено', 'Провалено'],
+                colors=colors_pie, autopct='%1.1f%%', startangle=90, textprops={'fontsize': 11})
+        ax4.set_title(f'Общий успех валидации: {success_rate:.1f}%', fontsize=12, fontweight='bold')
+
+        plt.tight_layout()
+
+        try:
+            plt.savefig(output_path, dpi=300, bbox_inches='tight')
+            print(f"[Визуализация] Сохранена: {output_path}")
+        except Exception as e:
+            print(f"[Ошибка] Не удалось сохранить визуализацию: {e}")
+        finally:
+            plt.close()
 
     # ==================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ====================
 
@@ -1142,8 +1472,12 @@ def run_full_validation(location_data: Dict[str, Any],
         location_data, roi_data, warehouse_data
     )
 
-    # 8. Генерация отчета
-    report_path = validator.generate_validation_report()
+    # 8. Генерация расширенного отчета с данными для сравнений
+    report_path = validator.generate_validation_report(
+        location_data=location_data,
+        warehouse_data=warehouse_data,
+        roi_data=roi_data
+    )
 
     # Итоговая статистика
     print("\n" + "="*100)
@@ -1157,6 +1491,8 @@ def run_full_validation(location_data: Dict[str, Any],
     print(f"Информационных: {validator.info_count}")
     if report_path:
         print(f"\nОтчет сохранен: {report_path}")
+        viz_path = report_path.replace('.xlsx', '_visualizations.png')
+        print(f"Визуализация сохранена: {viz_path}")
     print("="*100)
 
     return {
