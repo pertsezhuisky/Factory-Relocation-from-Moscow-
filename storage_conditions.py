@@ -214,7 +214,7 @@ class ClimateSystemCalculator:
     }
 
     # Годовые эксплуатационные расходы (% от стоимости оборудования)
-    ANNUAL_MAINTENANCE_RATE = 0.18  # 18% от CAPEX в год (увеличено с 12% для учета незапланированных ремонтов)
+    ANNUAL_MAINTENANCE_RATE = 0.12  # 12% от CAPEX в год
 
     # Стоимость электроэнергии (руб/кВт·ч)
     ELECTRICITY_COST_RUB_PER_KWH = 6.5
@@ -244,10 +244,8 @@ class ClimateSystemCalculator:
             cooling_power_w = area * self.COOLING_POWER_PER_SQM.get(regime, 120)
             cooling_power_kw = cooling_power_w / 1000
 
-            # CAPEX на оборудование (с учетом инфляции)
-            import config
-            base_equipment_capex = area * self.EQUIPMENT_COST_PER_SQM.get(regime, 8_000)
-            equipment_capex = base_equipment_capex * (1 + config.INFLATION_RATE)
+            # CAPEX на оборудование
+            equipment_capex = area * self.EQUIPMENT_COST_PER_SQM.get(regime, 8_000)
 
             # Годовой OPEX (обслуживание + электроэнергия)
             maintenance_opex = equipment_capex * self.ANNUAL_MAINTENANCE_RATE
@@ -348,7 +346,7 @@ class MonitoringSystemCalculator:
     RF_ID_READERS_PER_SQM = 0.005  # 1 ридер на 200 кв.м
 
     # Годовое обслуживание (% от CAPEX)
-    ANNUAL_MAINTENANCE_RATE = 0.18  # 18% от CAPEX (увеличено с 15% для учета незапланированных ремонтов)
+    ANNUAL_MAINTENANCE_RATE = 0.15  # 15% от CAPEX
 
     def calculate_monitoring_system(self, total_area: float,
                                    zone_areas: Dict[TemperatureRegime, float]) -> Dict[str, Any]:
@@ -366,12 +364,10 @@ class MonitoringSystemCalculator:
         temp_humidity_sensors = int(total_area * self.SENSORS_PER_SQM)
         rf_id_readers = int(total_area * self.RF_ID_READERS_PER_SQM)
 
-        # CAPEX (с учетом инфляции)
-        import config
-        sensors_capex = temp_humidity_sensors * self.SENSOR_COST_TEMP_HUMIDITY * (1 + config.INFLATION_RATE)
-        readers_capex = rf_id_readers * self.SENSOR_COST_RF_ID_READER * (1 + config.INFLATION_RATE)
-        central_capex = self.CENTRAL_SYSTEM_COST * (1 + config.INFLATION_RATE)
-        total_capex = sensors_capex + readers_capex + central_capex
+        # CAPEX
+        sensors_capex = temp_humidity_sensors * self.SENSOR_COST_TEMP_HUMIDITY
+        readers_capex = rf_id_readers * self.SENSOR_COST_RF_ID_READER
+        total_capex = sensors_capex + readers_capex + self.CENTRAL_SYSTEM_COST
 
         # Годовой OPEX (обслуживание + калибровка)
         annual_opex = total_capex * self.ANNUAL_MAINTENANCE_RATE
@@ -381,7 +377,7 @@ class MonitoringSystemCalculator:
             "rf_id_readers": rf_id_readers,
             "sensors_capex": sensors_capex,
             "readers_capex": readers_capex,
-            "central_system_capex": central_capex,
+            "central_system_capex": self.CENTRAL_SYSTEM_COST,
             "total_capex": total_capex,
             "annual_opex": annual_opex
         }

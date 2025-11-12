@@ -25,18 +25,15 @@ class AutomationEquipment:
     quantity: int
     unit_price: float
     installation_cost_multiplier: float = 0.15  # 15% от стоимости оборудования
-    annual_maintenance_rate: float = 0.18  # 18% от CAPEX в год (увеличено с 12% для учета незапланированных ремонтов)
+    annual_maintenance_rate: float = 0.12  # 12% от CAPEX в год
     labor_reduction_factor: float = 0.0  # Сокращение персонала (0-1)
     efficiency_boost: float = 0.0  # Повышение эффективности (0-1)
 
     def get_total_capex(self) -> float:
-        """Рассчитывает общий CAPEX для оборудования (с учетом инфляции)."""
-        import config
+        """Рассчитывает общий CAPEX для оборудования."""
         equipment_cost = self.quantity * self.unit_price
         installation_cost = equipment_cost * self.installation_cost_multiplier
-        base_capex = equipment_cost + installation_cost
-        # Применяем инфляционный коэффициент
-        return base_capex * (1 + config.INFLATION_RATE)
+        return equipment_cost + installation_cost
 
     def get_annual_opex(self) -> float:
         """Рассчитывает годовой OPEX для оборудования."""

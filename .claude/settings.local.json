@@ -11,9 +11,7 @@
       "Bash(python warehouse_analysis.py:*)",
       "Bash(output/analysis_log.txt)",
       "Bash(python:*)",
-      "Bash(cat:*)",
-      "Bash(timeout 300 python:*)",
-      "Bash(dir:*)"
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

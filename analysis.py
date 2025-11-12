@@ -521,7 +521,6 @@ class FleetOptimizer:
     def calculate_annual_transport_cost(self, avg_dist_cfo: float, avg_dist_svo: float, avg_dist_local: float) -> float:
         """
         Рассчитывает годовые транспортные расходы для всех трех потоков.
-        Включает базовые расходы + ремонт (15%) + компенсацию простоев (5%).
         """
         annual_orders = self.MONTHLY_ORDERS * 12
 
@@ -536,19 +535,7 @@ class FleetOptimizer:
         # Используем новый повышенный тариф из config.py для учета ограничений в Москве
         cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * avg_dist_local * config.MOSCOW_DELIVERY_TARIFF_RUB_PER_KM
 
-        # Базовые транспортные расходы
-        base_transport_cost = cost_cfo + cost_svo + cost_local
-
-        # Добавляем расходы на ремонт и обслуживание (15% от базовых расходов)
-        maintenance_cost = base_transport_cost * config.TRANSPORT_MAINTENANCE_RATE
-
-        # Добавляем компенсацию простоев (5% от базовых расходов)
-        downtime_cost = base_transport_cost * config.TRANSPORT_DOWNTIME_RATE
-
-        # Общие годовые транспортные расходы
-        total_cost = base_transport_cost + maintenance_cost + downtime_cost
-
-        return total_cost
+        return cost_cfo + cost_svo + cost_local
 
     # ============================================================================
     # ПРОМПТ 3: Интеграция и оптимизация - новые методы FleetOptimizer
