@@ -1,0 +1,46 @@
+{
+    "FINANCIALS": {
+        "Total_CAPEX": 1100000000,
+        "Annual_OPEX": 333096995.8008653
+    },
+    "LAYOUT": {
+        "Total_Area_SQM": 17000,
+        "Ceiling_Height": 12,
+        "GPP_ZONES": [
+            {
+                "Zone": "Cool_2_8C",
+                "Pallet_Capacity": 3000
+            },
+            {
+                "Zone": "Controlled_15_25C",
+                "Pallet_Capacity": 17000
+            }
+        ]
+    },
+    "RESOURCES": {
+        "Staff_Operators": 75,
+        "Automation_Type": "None",
+        "Processing_Time_Coefficient": 1.0
+    },
+    "LOGISTICS": {
+        "Location_Coords": [
+            56.01,
+            37.1
+        ],
+        "Required_Own_Fleet_Count": 532,
+        "Delivery_Flows": [
+            {
+                "Dest": "SVO_Aviation",
+                "Volume_Pct": 25.0
+            },
+            {
+                "Dest": "CFD_Own_Fleet",
+                "Volume_Pct": 46.0
+            },
+            {
+                "Dest": "Moscow_LPU",
+                "Volume_Pct": 28.999999999999996
+            }
+        ]
+    }
+}

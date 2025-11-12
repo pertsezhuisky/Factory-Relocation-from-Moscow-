@@ -6,14 +6,7 @@
       "Bash(pip install:*)",
       "Bash(python main.py:*)",
       "Bash(python analysis.py:*)",
-      "Bash(python test_enhanced_simulation.py:*)",
-      "Bash(if exist output mkdir output)",
-      "Bash(python warehouse_analysis.py:*)",
-      "Bash(output/analysis_log.txt)",
-      "Bash(python:*)",
-      "Bash(cat:*)",
-      "Bash(timeout 300 python:*)",
-      "Bash(dir:*)"
+      "Bash(python test_enhanced_simulation.py:*)"
     ],
     "deny": [],
     "ask": []
