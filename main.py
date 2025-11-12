@@ -1,27 +1,39 @@
+<<<<<<< HEAD
 from typing import Dict, Any, List, Optional
+=======
+# main.py
+
+"""
+Главный исполняемый файл.
+Оркестрирует полный цикл анализа релокации склада: от сбора данных до расчета ROI.
+"""
+import pandas as pd
+from typing import Dict, Any, List
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
 import math
 
 # Импорт всех необходимых компонентов
 from core.data_model import LocationSpec
 from core.location import WarehouseConfigurator # Используется для расчета расстояний
-from analysis import AvitoParserStub, FleetOptimizer, OSRMGeoRouter
+from analysis import AvitoParserStub, FleetOptimizer
 from scenarios import SCENARIOS_CONFIG # Для расчета Z_перс
 import config
 from simulation_runner import SimulationRunner
+<<<<<<< HEAD
 from transport_planner import DetailedFleetPlanner, DockSimulator
 from formula_visualizer import visualizer
 # Импорт новых модулей
 from warehouse_analysis import ComprehensiveWarehouseAnalysis
 from animations import create_all_animations
 from model_validation import run_full_validation
+=======
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
 
-def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float,
-                                     fleet_summary: Optional[Dict[str, Any]] = None,
-                                     dock_requirements: Optional[Dict[str, Any]] = None):
+def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float):
     """
     Генерирует текстовое описание детального плана переезда для оптимальной локации.
     """
-    print(f"\n{'='*80}\n[Шаг 7] ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА ДЛЯ ОПТИМАЛЬНОЙ ЛОКАЦИИ: '{location_data['location_name']}'\n{'='*80}")
+    print(f"\n{'='*80}\n[Шаг 6] ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА ДЛЯ ОПТИМАЛЬНОЙ ЛОКАЦИИ: '{location_data['location_name']}'\n{'='*80}")
     print(f"Выбранная локация: {location_data['location_name']}")
     print(f"Тип владения: {'Аренда' if location_data['type'] == 'ARENDA' else 'Покупка/BTS'}")
     print(f"Предложенная площадь: {location_data['area_offered_sqm']} кв.м")
@@ -32,26 +44,8 @@ def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: 
     print(f"  - Годовой OPEX (персонал, мин.): {z_pers_s1:,.0f} руб.")
     print(f"  - Годовой OPEX (транспорт): {location_data['total_annual_transport_cost']:,.0f} руб.")
     print(f"  - Общий годовой OPEX (Сценарий 1): {location_data['total_annual_opex_s1']:,.0f} руб.")
-
-    print(f"\nДетальные логистические параметры:")
-    if fleet_summary:
-        print(f"  - Всего единиц транспорта: {fleet_summary['total_vehicles']}")
-        print(f"  - Рекомендация по флоту: {'Аренда' if fleet_summary['recommendation'] == 'lease' else 'Покупка'}")
-        print(f"  - OPEX транспорта (при аренде): {fleet_summary['total_opex_lease']:,.0f} руб/год")
-        print(f"  - CAPEX транспорта (при покупке): {fleet_summary['total_capex_purchase']:,.0f} руб")
-
-        # Детализация по типам транспорта
-        for fleet in fleet_summary['fleet_breakdown']:
-            print(f"    * {fleet['vehicle_name']}: {fleet['required_count']} шт, {fleet['annual_trips']} рейсов/год")
-    else:
-        print(f"  - Требуемый собственный флот (ЦФО, упрощенный расчет): {location_data['required_fleet_count']} грузовиков")
-
-    if dock_requirements:
-        print(f"\nТребования к инфраструктуре доков:")
-        print(f"  - Inbound доков (приемка): {dock_requirements['inbound_docks']}")
-        print(f"  - Outbound доков (отгрузка): {dock_requirements['outbound_docks']}")
-        print(f"  - Пиковая нагрузка: {dock_requirements['peak_trips_per_day']:.1f} рейсов/день")
-        print(f"  - Утилизация доков: {dock_requirements['dock_utilization_percent']:.1f}%")
+    print(f"\nЛогистические параметры:")
+    print(f"  - Требуемый собственный флот (ЦФО): {location_data['required_fleet_count']} грузовиков")
     print("\nРекомендации для диаграммы Ганта:")
     print("1. Фаза планирования (1-2 месяца):")
     print("   - Детальный анализ выбранной локации, юридическая проверка.")
@@ -250,6 +244,7 @@ def main_multi_location_runner():
     # 4. Поиск Оптимума и сравнение всех локаций
     visualizer.print_section_header("ШАГ 4: ВЫБОР ОПТИМАЛЬНОЙ ЛОКАЦИИ", level=2)
 
+<<<<<<< HEAD
     # Создаем сравнительную визуализацию всех локаций
     visualizer.visualize_location_comparison(enriched_locations)
 
@@ -347,6 +342,11 @@ def main_multi_location_runner():
     # 6. Детализация Сценариев и SimPy для Оптимальной Локации
     visualizer.print_section_header("ШАГ 6: ЗАПУСК SIMPY СИМУЛЯЦИИ ДЛЯ ВСЕХ СЦЕНАРИЕВ", level=2)
 
+=======
+    # 5. Детализация Сценариев и SimPy для Оптимальной Локации
+    print(f"\n[Шаг 5] Запуск полного анализа для оптимальной локации: '{optimal_location['location_name']}'")
+    
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
     # Создаем LocationSpec для SimulationRunner
     optimal_location_spec = LocationSpec(
         name=optimal_location['location_name'],
@@ -369,6 +369,7 @@ def main_multi_location_runner():
     runner = SimulationRunner(location_spec=optimal_location_spec)
     runner.run_all_scenarios(initial_base_finance=initial_base_finance_for_runner)
 
+<<<<<<< HEAD
     # 7. Создание итогового dashboard
     visualizer.print_section_header("ШАГ 7: СОЗДАНИЕ ИТОГОВОГО DASHBOARD", level=2)
 
@@ -414,6 +415,10 @@ def main_multi_location_runner():
     # 11. Вывод Плана Переезда
     visualizer.print_section_header("ШАГ 11: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
     generate_detailed_relocation_plan(optimal_location, z_pers_s1, fleet_summary, dock_requirements)
+=======
+    # 6. Вывод Плана Переезда
+    generate_detailed_relocation_plan(optimal_location, z_pers_s1)
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
 
 if __name__ == "__main__":
     try:
