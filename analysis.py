@@ -1,10 +1,6 @@
 """
 Скрипт для анализа и визуализации результатов ПОСЛЕ выполнения симуляции.
 Запускается отдельно командой: python analysis.py
-
-ВАЖНО: Использует бесплатные API:
-- OSRM (https://router.project-osrm.org) для маршрутизации
-- Nominatim/geopy для геокодирования
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,14 +8,6 @@ import seaborn as sns
 import os
 import config
 import math
-import requests  # Для HTTP-запросов к OSRM API
-import time
-from typing import Optional, Dict, Tuple
-from geopy.geocoders import Nominatim  # Для геокодирования адресов
-# from bs4 import BeautifulSoup  # Для парсинга HTML ЦИАН/Яндекс.Недвижимость (опционально)
-
-# Импорт детального транспортного планировщика
-from transport_planner import DetailedFleetPlanner, DockSimulator
 
 class AvitoParserStub:
     """
@@ -763,128 +751,7 @@ if __name__ == "__main__":
     for loc in scored_results:
         if loc['location_name'] in ['Белый Раст Логистика', 'PNK Чашниково BTS']:
             print(f"Локация: '{loc['location_name']}' ({loc['type']})")
-            print(f"  > Площадь: {loc['area_offered_sqm']} кв.м")
+            print(f"  > Площадь: {loc['area_offered_sqm']} м²")
             print(f"  > OPEX (помещение): {loc['annual_building_opex']:,.0f} руб./год")
             print(f"  > CAPEX (начальный):  {loc['total_initial_capex']:,.0f} руб.")
             print("-" * 80)
-
-    print("\n" + "="*80)
-    print("ДЕМОНСТРАЦИЯ НОВЫХ КЛАССОВ (AvitoCIANScraper, OSRMGeoRouter, FleetOptimizer)")
-    print("="*80)
-
-    # ============================================================================
-    # ПРОМПТ 1: Демонстрация AvitoCIANScraper
-    # ============================================================================
-    print("\n[1] Демонстрация AvitoCIANScraper (полный парсер с HTTP-запросами)")
-    print("="*80)
-
-    scraper = AvitoCIANScraper()
-
-    # Имитация HTTP-запроса к API
-    raw_offers = scraper.fetch_raw_offers_data("https://api.avito.ru/search?category=warehouse&area_min=17000")
-
-    # Парсинг и фильтрация
-    filtered_offers = scraper.parse_and_filter_offers(raw_offers)
-
-    print(f"\n[AvitoCIANScraper] Итого найдено подходящих локаций: {len(filtered_offers)}")
-
-    # ============================================================================
-    # ПРОМПТ 2: Демонстрация OSRMGeoRouter (бесплатный API)
-    # ============================================================================
-    print("\n" + "="*80)
-    print("[2] Демонстрация OSRMGeoRouter (бесплатный OSRM API)")
-    print("="*80)
-
-    geo_router = OSRMGeoRouter(use_geocoding=False)  # Geocoding отключен для быстроты
-
-    # Пример: маршрут Сходненская -> Логопарк Север-2
-    test_location_coords = (56.03, 37.59)  # Логопарк Север-2
-
-    print(f"\nТестовый маршрут: Сходненская {geo_router.CURRENT_HUB_COORDS} -> Логопарк Север-2 {test_location_coords}")
-    route_demo = geo_router.get_route_details(geo_router.CURRENT_HUB_COORDS, test_location_coords)
-
-    print("\n  > [JSON-ответ от OSRM API]")
-    print(f"    {{")
-    print(f"      'status': '{route_demo['status']}',")
-    print(f"      'mode': '{route_demo['mode']}',")
-    print(f"      'route_distance_km': {route_demo['route_distance_km']},")
-    print(f"      'travel_time_h': {route_demo['travel_time_h']},")
-    print(f"      'source': '{route_demo.get('source', 'unknown')}'")
-    print(f"    }}")
-
-    # Расчет взвешенного годового расстояния
-    weighted_distance_demo = geo_router.calculate_weighted_annual_distance(test_location_coords)
-
-    # ============================================================================
-    # ПРОМПТ 3: Демонстрация новых методов FleetOptimizer
-    # ============================================================================
-    print("\n" + "="*80)
-    print("[3] Демонстрация FleetOptimizer (расчет флота и CAPEX переезда)")
-    print("="*80)
-
-    fleet_opt = FleetOptimizer()
-
-    # Выбираем тестовую локацию
-    test_location = filtered_offers[0]
-
-    # Расчет оптимального флота и годовых расходов
-    fleet_cost_result = fleet_opt.calculate_optimal_fleet_and_cost(test_location, geo_router)
-
-    # Расчет CAPEX переезда
-    relocation_capex = fleet_opt.calculate_relocation_capex(test_location_coords, geo_router)
-
-    print("\n[ИТОГОВАЯ СВОДКА]")
-    print(f"  Локация: {test_location['location_name']}")
-    print(f"  T_год (годовые транспортные расходы): {fleet_cost_result['total_annual_transport_cost']:,.0f} руб")
-    print(f"  CAPEX переезда (транспортировка товара): {relocation_capex['transport_capex_rub']:,.0f} руб")
-    print(f"  Флот 18-20т: {fleet_cost_result['fleet_required']['heavy_trucks_18_20t']} шт")
-    print(f"  Флот 5т: {fleet_cost_result['fleet_required']['light_trucks_5t']} шт")
-
-    # ============================================================================
-    # ДЕМОНСТРАЦИЯ ДЕТАЛЬНОГО ТРАНСПОРТНОГО ПЛАНИРОВЩИКА
-    # ============================================================================
-    print("\n" + "="*80)
-    print("[4] Демонстрация DetailedFleetPlanner (детальный расчет транспорта)")
-    print("="*80)
-
-    detailed_planner = DetailedFleetPlanner()
-
-    # Используем расстояния из предыдущего расчета
-    distances = {
-        'cfo_km': fleet_cost_result['distances']['cfo_km'],
-        'svo_km': fleet_cost_result['distances']['svo_km'],
-        'local_km': fleet_cost_result['distances']['local_km']
-    }
-
-    # Детальный расчет флота
-    fleet_summary = detailed_planner.calculate_fleet_requirements(distances)
-
-    # Расчет доков
-    dock_requirements = detailed_planner.calculate_dock_requirements(fleet_summary)
-
-    # График работы
-    transport_schedule = detailed_planner.generate_transport_schedule(fleet_summary)
-
-    # Симуляция доков
-    print("\n  > [DockSimulator] Проверка пропускной способности доков")
-    dock_sim = DockSimulator(
-        inbound_docks=dock_requirements['inbound_docks'],
-        outbound_docks=dock_requirements['outbound_docks']
-    )
-    dock_simulation = dock_sim.simulate_dock_operations(dock_requirements['peak_trips_per_day'])
-
-    print(f"    - Утилизация inbound: {dock_simulation['inbound_utilization_percent']:.1f}%")
-    print(f"    - Утилизация outbound: {dock_simulation['outbound_utilization_percent']:.1f}%")
-    print(f"    - Достаточность: {'ДА' if dock_simulation['is_sufficient'] else 'НЕТ, требуется больше доков'}")
-
-    print("\n[ДЕТАЛЬНАЯ ТРАНСПОРТНАЯ СВОДКА]")
-    print(f"  Всего единиц техники: {fleet_summary['total_vehicles']}")
-    print(f"  Рекомендация: {'Аренда флота' if fleet_summary['recommendation'] == 'lease' else 'Покупка флота'}")
-    print(f"  Годовой OPEX (собственный): {fleet_summary['total_opex_own_fleet']:,.0f} руб")
-    print(f"  Годовой OPEX (аренда): {fleet_summary['total_opex_lease']:,.0f} руб")
-    print(f"  CAPEX (покупка): {fleet_summary['total_capex_purchase']:,.0f} руб")
-    print(f"  Доков (приемка/отгрузка): {dock_requirements['inbound_docks']}/{dock_requirements['outbound_docks']}")
-
-    print("\n" + "="*80)
-    print("ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА")
-    print("="*80)
