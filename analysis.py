@@ -2,12 +2,14 @@
 Скрипт для анализа и визуализации результатов ПОСЛЕ выполнения симуляции.
 Запускается отдельно командой: python analysis.py
 """
+from typing import Optional, Dict, Any, List, Tuple
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 import config
 import math
+import requests
 
 class AvitoParserStub:
     """
