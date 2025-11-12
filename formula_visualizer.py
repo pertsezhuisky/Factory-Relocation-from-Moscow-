@@ -106,33 +106,33 @@ class FormulaVisualizer:
         self.print_section_header(f"РАСЧЕТ РАССТОЯНИЙ ДЛЯ ЛОКАЦИИ: {location_name}", level=2)
 
         # Вывод формулы Haversine
-        print("\n📐 Используется формула Haversine для расчета расстояния по поверхности Земли:")
+        print("\n[FORMULA] Ispol'zuetsya formula Haversine dlya rascheta rasstoyaniya po poverhnosti Zemli:")
 
-        formula_latex = "d = 2R × arcsin(√(sin²(Δlat/2) + cos(lat₁) × cos(lat₂) × sin²(Δlon/2))) × 1.4"
+        formula_latex = "d = 2R x arcsin(sqrt(sin^2(Deltalat/2) + cos(lat_1) x cos(lat_2) x sin^2(Deltalon/2))) x 1.4"
         variables = {
             "R": (6371.0, "радиус Земли в км"),
-            "lat₁, lon₁": (f"{warehouse_coords[0]:.4f}, {warehouse_coords[1]:.4f}", "координаты склада"),
-            "Δlat, Δlon": ("разница координат", "в радианах"),
+            "lat_1, lon_1": (f"{warehouse_coords[0]:.4f}, {warehouse_coords[1]:.4f}", "координаты склада"),
+            "Deltalat, Deltalon": ("разница координат", "в радианах"),
             "1.4": (1.4, "коэффициент реальных дорог (извилистость)")
         }
 
-        print(f"\n┌─ Формула Haversine (расчет расстояния по дуге большого круга) " + "─" * 28)
-        print(f"│")
-        print(f"│ ФОРМУЛА: {formula_latex}")
-        print(f"│")
-        print(f"│ ГДЕ:")
+        print(f"\n+- Формула Haversine (расчет расстояния по дуге большого круга) " + "-" * 28)
+        print(f"|")
+        print(f"| ФОРМУЛА: {formula_latex}")
+        print(f"|")
+        print(f"| ГДЕ:")
         for var_name, var_data in variables.items():
             value, description = var_data if isinstance(var_data, tuple) else (var_data, "")
-            print(f"│   • {var_name} = {value} ({description})")
-        print(f"└" + "─" * 99)
+            print(f"|    {var_name} = {value} ({description})")
+        print(f"+" + "-" * 99)
 
         # Детальный расчет для каждой точки
-        print(f"\n📍 Координаты склада: ({warehouse_coords[0]:.4f}, {warehouse_coords[1]:.4f})")
-        print(f"\n📊 Расчет расстояний до ключевых точек:\n")
+        print(f"\n[LOC] Координаты склада: ({warehouse_coords[0]:.4f}, {warehouse_coords[1]:.4f})")
+        print(f"\n[CHART] Расчет расстояний до ключевых точек:\n")
 
         for point_name, point_coords in key_points.items():
             dist = distances.get(point_name, 0)
-            print(f"  ➤ {point_name}:")
+            print(f"  > {point_name}:")
             print(f"      Координаты цели: ({point_coords[0]:.4f}, {point_coords[1]:.4f})")
             print(f"      Расстояние: {dist:.2f} км")
             print()
@@ -194,7 +194,7 @@ class FormulaVisualizer:
         plt.tight_layout()
         filename = f'{self.output_dir}/distances_{location_name.replace(" ", "_")}.png'
         plt.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"\n💾 График сохранен: {filename}")
+        print(f"\n[SAVE] График сохранен: {filename}")
         plt.close()
 
     def visualize_capex_opex_breakdown(self, location_name: str,
@@ -211,7 +211,7 @@ class FormulaVisualizer:
         self.print_section_header(f"ДЕТАЛЬНЫЙ ФИНАНСОВЫЙ АНАЛИЗ: {location_name}", level=2)
 
         # Вывод формул CAPEX
-        print("\n💰 РАСЧЕТ CAPEX (Capital Expenditure - Капитальные затраты):\n")
+        print("\n РАСЧЕТ CAPEX (Capital Expenditure - Капитальные затраты):\n")
 
         total_capex = sum(capex_data.values())
         formula_capex = "CAPEX_total = CAPEX_equipment + CAPEX_climate + CAPEX_modifications + CAPEX_building"
@@ -225,7 +225,7 @@ class FormulaVisualizer:
         )
 
         # Вывод формул OPEX
-        print("\n💸 РАСЧЕТ OPEX (Operational Expenditure - Операционные затраты):\n")
+        print("\n РАСЧЕТ OPEX (Operational Expenditure - Операционные затраты):\n")
 
         total_opex = sum(opex_data.values())
         formula_opex = "OPEX_total = OPEX_building + OPEX_personnel + OPEX_transport"
@@ -315,7 +315,7 @@ class FormulaVisualizer:
 
         filename = f'{self.output_dir}/finance_{location_name.replace(" ", "_")}.png'
         plt.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"\n💾 График сохранен: {filename}")
+        print(f"\n[SAVE] График сохранен: {filename}")
         plt.close()
 
     def visualize_transport_costs(self, location_name: str,
@@ -332,24 +332,24 @@ class FormulaVisualizer:
         self.print_section_header(f"ДЕТАЛЬНЫЙ ТРАНСПОРТНЫЙ АНАЛИЗ: {location_name}", level=2)
 
         # Вывод формул расчета транспортных расходов
-        print("\n🚚 РАСЧЕТ ТРАНСПОРТНЫХ РАСХОДОВ:\n")
+        print("\n[TRUCK] РАСЧЕТ ТРАНСПОРТНЫХ РАСХОДОВ:\n")
 
         for fleet in fleet_data:
-            print(f"\n┌─ {fleet['vehicle_name']} " + "─" * (95 - len(fleet['vehicle_name'])))
-            print(f"│")
-            print(f"│ Количество: {fleet['required_count']} единиц")
-            print(f"│ Рейсов в год: {fleet['annual_trips']:,}")
-            print(f"│ Километраж в год: {fleet['annual_distance_km']:,.0f} км")
-            print(f"│")
-            print(f"│ ДЕТАЛИЗАЦИЯ РАСХОДОВ:")
+            print(f"\n+- {fleet['vehicle_name']} " + "-" * (95 - len(fleet['vehicle_name'])))
+            print(f"|")
+            print(f"| Количество: {fleet['required_count']} единиц")
+            print(f"| Рейсов в год: {fleet['annual_trips']:,}")
+            print(f"| Километраж в год: {fleet['annual_distance_km']:,.0f} км")
+            print(f"|")
+            print(f"| ДЕТАЛИЗАЦИЯ РАСХОДОВ:")
             for cost_name, cost_value in fleet['costs'].items():
                 if cost_name != 'total_opex_rub':
-                    print(f"│   • {cost_name}: {cost_value:,.0f} руб")
-            print(f"│")
-            print(f"│ ═══ ИТОГО OPEX: {fleet['costs']['total_opex_rub']:,.0f} руб/год ═══")
-            print(f"│ ═══ CAPEX (покупка): {fleet['capex_purchase_rub']:,.0f} руб ═══")
-            print(f"│ ═══ OPEX (аренда): {fleet['opex_lease_rub']:,.0f} руб/год ═══")
-            print(f"└" + "─" * 99)
+                    print(f"|    {cost_name}: {cost_value:,.0f} руб")
+            print(f"|")
+            print(f"| === ИТОГО OPEX: {fleet['costs']['total_opex_rub']:,.0f} руб/год ===")
+            print(f"| === CAPEX (покупка): {fleet['capex_purchase_rub']:,.0f} руб ===")
+            print(f"| === OPEX (аренда): {fleet['opex_lease_rub']:,.0f} руб/год ===")
+            print(f"+" + "-" * 99)
 
         # Создание визуализации
         fig = plt.figure(figsize=(18, 12))
@@ -451,7 +451,7 @@ class FormulaVisualizer:
 
         filename = f'{self.output_dir}/transport_{location_name.replace(" ", "_")}.png'
         plt.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"\n💾 График сохранен: {filename}")
+        print(f"\n[SAVE] График сохранен: {filename}")
         plt.close()
 
     def visualize_location_comparison(self, locations_data: List[Dict[str, Any]]):
@@ -551,23 +551,23 @@ class FormulaVisualizer:
 
         filename = f'{self.output_dir}/comparison_all_locations.png'
         plt.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"\n💾 Сравнительный график сохранен: {filename}")
+        print(f"\n[SAVE] Сравнительный график сохранен: {filename}")
         plt.close()
 
         # Вывод таблицы с рейтингом
-        print("\n📊 РЕЙТИНГ ЛОКАЦИЙ ПО ГОДОВОМУ OPEX:\n")
+        print("\n[CHART] РЕЙТИНГ ЛОКАЦИЙ ПО ГОДОВОМУ OPEX:\n")
         sorted_locations = sorted(locations_data, key=lambda x: x['total_annual_opex_s1'])
 
-        print("┌─────┬─────────────────────────────────┬──────────────────┬──────────────────┬──────────────────┐")
-        print("│ № │ Локация                         │ CAPEX (млн руб)  │ OPEX (млн руб)   │ Тип владения     │")
-        print("├─────┼─────────────────────────────────┼──────────────────┼──────────────────┼──────────────────┤")
+        print("+-----+---------------------------------+------------------+------------------+------------------+")
+        print("|  | Локация                         | CAPEX (млн руб)  | OPEX (млн руб)   | Тип владения     |")
+        print("+-----+---------------------------------+------------------+------------------+------------------+")
 
         for idx, loc in enumerate(sorted_locations, 1):
-            marker = "🏆" if idx == 1 else f" {idx} "
-            print(f"│ {marker} │ {loc['location_name'][:30]:<31} │ {loc['total_initial_capex']/1_000_000:>14.1f}   │"
-                  f" {loc['total_annual_opex_s1']/1_000_000:>14.1f}   │ {loc['type']:<16} │")
+            marker = "[WIN]" if idx == 1 else f" {idx} "
+            print(f"| {marker} | {loc['location_name'][:30]:<31} | {loc['total_initial_capex']/1_000_000:>14.1f}   |"
+                  f" {loc['total_annual_opex_s1']/1_000_000:>14.1f}   | {loc['type']:<16} |")
 
-        print("└─────┴─────────────────────────────────┴──────────────────┴──────────────────┴──────────────────┘")
+        print("+-----+---------------------------------+------------------+------------------+------------------+")
 
     def create_dashboard(self, optimal_location: Dict[str, Any],
                         fleet_summary: Dict[str, Any],
@@ -591,7 +591,7 @@ class FormulaVisualizer:
 
         title_text = f"ОПТИМАЛЬНАЯ ЛОКАЦИЯ: {optimal_location['location_name']}\n"
         title_text += f"Координаты: ({optimal_location['lat']:.4f}, {optimal_location['lon']:.4f})\n"
-        title_text += f"Площадь: {optimal_location['area_offered_sqm']:,} м² | "
+        title_text += f"Площадь: {optimal_location['area_offered_sqm']:,} м^2 | "
         title_text += f"Тип: {optimal_location['type']}"
 
         ax_title.text(0.5, 0.5, title_text, ha='center', va='center',
@@ -686,7 +686,7 @@ class FormulaVisualizer:
 
         filename = f'{self.output_dir}/dashboard_optimal_location.png'
         plt.savefig(filename, dpi=150, bbox_inches='tight')
-        print(f"\n💾 Dashboard сохранен: {filename}")
+        print(f"\n[SAVE] Dashboard сохранен: {filename}")
         plt.close()
 
 

@@ -93,21 +93,42 @@ def main_multi_location_runner():
 
     s1_staff_attrition_rate = SCENARIOS_CONFIG["1_Move_No_Mitigation"]["staff_attrition_rate"]
     s1_staff_count = math.floor(config.INITIAL_STAFF_COUNT * (1 - s1_staff_attrition_rate))
-    z_pers_s1 = s1_staff_count * config.OPERATOR_SALARY_RUB_MONTH * 12
+
+    # Базовые расходы на зарплату
+    z_pers_base = s1_staff_count * config.OPERATOR_SALARY_RUB_MONTH * 12
+
+    # Дополнительные расходы на персонал
+    # 1. Обучение новых сотрудников (единоразово в первый год)
+    new_hires = math.floor(config.INITIAL_STAFF_COUNT * s1_staff_attrition_rate)  # Количество новых сотрудников
+    training_costs = new_hires * config.STAFF_TRAINING_COST_PER_PERSON
+
+    # 2. Адаптация (20% от зарплаты в первый месяц для новых сотрудников)
+    adaptation_costs = new_hires * config.OPERATOR_SALARY_RUB_MONTH * config.STAFF_ADAPTATION_RATE
+
+    # 3. Компенсация при переезде (для сотрудников, которые переезжают с компанией)
+    relocating_staff = config.INITIAL_STAFF_COUNT - new_hires
+    relocation_costs = relocating_staff * config.STAFF_RELOCATION_COMPENSATION
+
+    # Общие годовые расходы на персонал (включая единоразовые затраты в первый год)
+    z_pers_s1 = z_pers_base + training_costs + adaptation_costs + relocation_costs
 
     # Подробный вывод формулы расчета персонала
     visualizer.print_formula(
-        "Raschet minimal'nyh rashodov na personal",
-        "Z_pers = N_sotrudnikov * Zarplata_mesyats * 12",
+        "Raschet polnyh rashodov na personal (s uchetom obucheniya i kompensatsiy)",
+        "Z_pers = Zarplaty + Obuchenie + Adaptatsiya + Kompensatsii",
         {
             "N_nachal'noe": (config.INITIAL_STAFF_COUNT, "nachal'noe kolichestvo sotrudnikov"),
             "Koeff_ottoka": (s1_staff_attrition_rate, "koeffitsient ottoka personala (Stsenariy 1)"),
             "N_sotrudnikov": (s1_staff_count, f"floor({config.INITIAL_STAFF_COUNT} * (1 - {s1_staff_attrition_rate}))"),
+            "N_novyh": (new_hires, "kolichestvo novyh sotrudnikov"),
             "Zarplata_mesyats": (config.OPERATOR_SALARY_RUB_MONTH, "srednyaya zarplata operatora v mesyats, rub"),
-            "Mesyatsev": (12, "kolichestvo mesyatsev v godu")
+            "Zarplaty_god": (z_pers_base, f"{s1_staff_count} * {config.OPERATOR_SALARY_RUB_MONTH} * 12"),
+            "Obuchenie": (training_costs, f"{new_hires} * {config.STAFF_TRAINING_COST_PER_PERSON}"),
+            "Adaptatsiya": (adaptation_costs, f"{new_hires} * {config.OPERATOR_SALARY_RUB_MONTH} * {config.STAFF_ADAPTATION_RATE}"),
+            "Kompensatsii": (relocation_costs, f"{relocating_staff} * {config.STAFF_RELOCATION_COMPENSATION}")
         },
         z_pers_s1,
-        "rub/god"
+        "rub (pervyy god)"
     )
 
     visualizer.print_section_header("ШАГ 3: АНАЛИЗ ЛОГИСТИКИ И РАСЧЕТ ТРАНСПОРТНЫХ РАСХОДОВ", level=2)
@@ -350,8 +371,28 @@ def main_multi_location_runner():
     print("\n[DASHBOARD] Generatsiya itogo dashboard s vizualizatsiey vseh klyuchevyh pokazateley...")
     visualizer.create_dashboard(optimal_location, fleet_summary, dock_requirements)
 
-    # 8. Вывод Плана Переезда
-    visualizer.print_section_header("ШАГ 8: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
+    # 8. Детальный анализ склада (зонирование, условия хранения, автоматизация)
+    visualizer.print_section_header("ШАГ 8: ДЕТАЛЬНЫЙ АНАЛИЗ СКЛАДА И АВТОМАТИЗАЦИИ", level=2)
+
+    print("\n[WAREHOUSE] Zapusk kompleksnogo analiza sklada dlya optimal'noy lokatsii...")
+    print(f"   * Lokatsiya: {optimal_location['location_name']}")
+    print(f"   * Ploshchad': {optimal_location['area_offered_sqm']:,.0f} kv.m")
+
+    # Импортируем модуль анализа склада
+    from warehouse_analysis import ComprehensiveWarehouseAnalysis
+
+    # Создаем экземпляр для детального анализа
+    warehouse_analyzer = ComprehensiveWarehouseAnalysis(
+        location_name=optimal_location['location_name'],
+        total_area=optimal_location['area_offered_sqm'],
+        total_sku=15_000  # 15,000 SKU согласно требованиям
+    )
+
+    # Запускаем полный анализ
+    warehouse_analyzer.run_full_analysis()
+
+    # 9. Вывод Плана Переезда
+    visualizer.print_section_header("ШАГ 9: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
     generate_detailed_relocation_plan(optimal_location, z_pers_s1, fleet_summary, dock_requirements)
 
 if __name__ == "__main__":
