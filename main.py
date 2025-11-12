@@ -10,6 +10,10 @@ import config
 from simulation_runner import SimulationRunner
 from transport_planner import DetailedFleetPlanner, DockSimulator
 from formula_visualizer import visualizer
+# Импорт новых модулей
+from warehouse_analysis import ComprehensiveWarehouseAnalysis
+from animations import create_all_animations
+from model_validation import run_full_validation
 
 def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float,
                                      fleet_summary: Optional[Dict[str, Any]] = None,
@@ -377,10 +381,6 @@ def main_multi_location_runner():
     print("\n[WAREHOUSE] Zapusk kompleksnogo analiza sklada dlya optimal'noy lokatsii...")
     print(f"   * Lokatsiya: {optimal_location['location_name']}")
     print(f"   * Ploshchad': {optimal_location['area_offered_sqm']:,.0f} kv.m")
-
-    # Импортируем модуль анализа склада
-    from warehouse_analysis import ComprehensiveWarehouseAnalysis
-
     # Создаем экземпляр для детального анализа
     warehouse_analyzer = ComprehensiveWarehouseAnalysis(
         location_name=optimal_location['location_name'],
@@ -391,8 +391,28 @@ def main_multi_location_runner():
     # Запускаем полный анализ
     warehouse_analyzer.run_full_analysis()
 
-    # 9. Вывод Плана Переезда
-    visualizer.print_section_header("ШАГ 9: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
+    # 9. Создание анимаций
+    visualizer.print_section_header("ШАГ 9: СОЗДАНИЕ АНИМАЦИЙ", level=2)
+    if warehouse_analyzer.roi_data:
+        create_all_animations(warehouse_analyzer.roi_data, output_dir=config.OUTPUT_DIR)
+    else:
+        print("[WARNING] Dannye dlya sozdaniya animatsiy otsutstvuyut.")
+
+    # 10. Валидация и верификация модели
+    visualizer.print_section_header("ШАГ 10: ВАЛИДАЦИЯ И ВЕРИФИКАЦИЯ МОДЕЛИ", level=2)
+    
+    # Собираем все данные для валидатора
+    warehouse_data_for_validation = {
+        'zoning_data': warehouse_analyzer.zoning_data,
+        'equipment_data': warehouse_analyzer.equipment_data,
+        'total_sku': warehouse_analyzer.total_sku
+    }
+    
+    run_full_validation(optimal_location, warehouse_data_for_validation, 
+                        warehouse_analyzer.roi_data, warehouse_analyzer.automation_scenarios)
+
+    # 11. Вывод Плана Переезда
+    visualizer.print_section_header("ШАГ 11: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
     generate_detailed_relocation_plan(optimal_location, z_pers_s1, fleet_summary, dock_requirements)
 
 if __name__ == "__main__":
