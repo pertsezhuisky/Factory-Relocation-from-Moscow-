@@ -19,8 +19,6 @@ CURRENT_WAREHOUSE_SALE_VALUE_RUB = 800_000_000 # Оценочная стоимо
 
 # --- Константы склада и локации ---
 WAREHOUSE_TOTAL_AREA_SQM = 17000
-MIN_AREA_SQM = 17000  # Минимально требуемая площадь
-TARGET_AREA_SQM = 17500  # Целевая площадь
 ANNUAL_RENT_PER_SQM_RUB = 7500.0
 PURCHASE_BUILDING_COST_RUB = 1_500_000_000
 BASE_EQUIPMENT_CAPEX_RUB = 350_000_000  # Стеллажи, климат, валидация
