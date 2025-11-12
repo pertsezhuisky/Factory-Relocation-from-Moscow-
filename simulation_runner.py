@@ -3,7 +3,6 @@ import math
 from typing import List, Optional, Dict, Any
 import os
 
-# Импорт модулей ядра и настроек
 from core.data_model import LocationSpec, ScenarioResult
 from core.location import WarehouseConfigurator
 from core.simulation_engine import WarehouseSimulator

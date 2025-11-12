@@ -1,4 +1,19 @@
+<<<<<<< HEAD
 from typing import Dict, Any, List, Optional
+=======
+<<<<<<< HEAD
+from typing import Dict, Any, List, Optional
+=======
+# main.py
+
+"""
+Главный исполняемый файл.
+Оркестрирует полный цикл анализа релокации склада: от сбора данных до расчета ROI.
+"""
+import pandas as pd
+from typing import Dict, Any, List
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
+>>>>>>> inside-warehouse
 import math
 
 # Импорт всех необходимых компонентов
@@ -8,12 +23,18 @@ from analysis import AvitoParserStub, FleetOptimizer
 from scenarios import SCENARIOS_CONFIG # Для расчета Z_перс
 import config
 from simulation_runner import SimulationRunner
+<<<<<<< HEAD
 from transport_planner import DetailedFleetPlanner, DockSimulator
 from formula_visualizer import visualizer
 # Импорт новых модулей
 from warehouse_analysis import ComprehensiveWarehouseAnalysis
 from animations import create_all_animations
 from model_validation import run_full_validation
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
+>>>>>>> inside-warehouse
 
 def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float):
     """
@@ -230,6 +251,10 @@ def main_multi_location_runner():
     # 4. Поиск Оптимума и сравнение всех локаций
     visualizer.print_section_header("ШАГ 4: ВЫБОР ОПТИМАЛЬНОЙ ЛОКАЦИИ", level=2)
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> inside-warehouse
     # Создаем сравнительную визуализацию всех локаций
     visualizer.visualize_location_comparison(enriched_locations)
 
@@ -327,6 +352,11 @@ def main_multi_location_runner():
     # 6. Детализация Сценариев и SimPy для Оптимальной Локации
     visualizer.print_section_header("ШАГ 6: ЗАПУСК SIMPY СИМУЛЯЦИИ ДЛЯ ВСЕХ СЦЕНАРИЕВ", level=2)
 
+=======
+    # 5. Детализация Сценариев и SimPy для Оптимальной Локации
+    print(f"\n[Шаг 5] Запуск полного анализа для оптимальной локации: '{optimal_location['location_name']}'")
+    
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
     # Создаем LocationSpec для SimulationRunner
     optimal_location_spec = LocationSpec(
         name=optimal_location['location_name'],
@@ -349,6 +379,10 @@ def main_multi_location_runner():
     runner = SimulationRunner(location_spec=optimal_location_spec)
     runner.run_all_scenarios(initial_base_finance=initial_base_finance_for_runner)
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> inside-warehouse
     # 7. Создание итогового dashboard
     visualizer.print_section_header("ШАГ 7: СОЗДАНИЕ ИТОГОВОГО DASHBOARD", level=2)
 
@@ -394,6 +428,10 @@ def main_multi_location_runner():
     # 11. Вывод Плана Переезда
     visualizer.print_section_header("ШАГ 11: ДЕТАЛЬНЫЙ ПЛАН ПЕРЕЕЗДА", level=2)
     generate_detailed_relocation_plan(optimal_location, z_pers_s1, fleet_summary, dock_requirements)
+=======
+    # 6. Вывод Плана Переезда
+    generate_detailed_relocation_plan(optimal_location, z_pers_s1)
+>>>>>>> parent of 4b11624 (Add advanced transport planning and OSRM routing)
 
 if __name__ == "__main__":
     try:
