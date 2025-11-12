@@ -1,13 +1,17 @@
-# config.py
-
 """
 Глобальные статические константы и базовые настройки проекта.
 """
 
 # --- Финансовые и HR константы ---
 INITIAL_STAFF_COUNT = 100
-OPERATOR_SALARY_RUB_MONTH = 105000
+OPERATOR_SALARY_RUB_MONTH = 85000  # Скорректировано: средняя зарплата для региона 80-90k
+STAFF_TRAINING_COST_PER_PERSON = 50000  # Единоразовые расходы на обучение нового сотрудника
+STAFF_ADAPTATION_RATE = 0.20  # 20% от зарплаты в первый месяц на адаптацию
+STAFF_RELOCATION_COMPENSATION = 100000  # Компенсация при переезде на человека
+
 TRANSPORT_TARIFF_RUB_PER_KM = 13.4  # Средний тариф для 18-20т фуры
+TRANSPORT_MAINTENANCE_RATE = 0.15  # 15% от транспортных расходов на ремонт
+TRANSPORT_DOWNTIME_RATE = 0.05  # 5% времени в простое
 
 # --- Параметры текущего актива (старый склад на "Сходненской") ---
 CURRENT_WAREHOUSE_IS_OWNED = True  # Мы владеем текущим складом? True - да, False - нет (в аренде)
@@ -19,6 +23,11 @@ ANNUAL_RENT_PER_SQM_RUB = 7500.0
 PURCHASE_BUILDING_COST_RUB = 1_500_000_000
 BASE_EQUIPMENT_CAPEX_RUB = 350_000_000  # Стеллажи, климат, валидация
 MAINTENANCE_COST_OF_OWNED_BUILDING_RUB_YEAR = 50_000_000
+
+# --- Экономические константы ---
+INFLATION_RATE = 0.08  # 8% годовая инфляция для корректировки CAPEX
+EQUIPMENT_OPEX_MAINTENANCE_RATE = 0.18  # 18% от CAPEX на обслуживание оборудования в год
+EMERGENCY_REPAIR_BUDGET_RATE = 0.05  # 5% бюджета на незапланированные ремонты
 
 # --- Симуляционные константы ---
 BASE_ORDER_PROCESSING_TIME_MIN = 15.0
@@ -87,7 +96,7 @@ ALL_CANDIDATE_LOCATIONS = {
         "type": "POKUPKA_BTS",
         "lat": 56.01,
         "lon": 37.10,
-        "area_offered_sqm": 20000,
+        "area_offered_sqm": 17500,
         "cost_metric_base": 1_500_000_000, # общая стоимость
         "current_class": "A_requires_mod"
     },
