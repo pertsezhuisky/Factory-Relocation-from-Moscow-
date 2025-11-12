@@ -1,5 +1,3 @@
-# config.py
-
 """
 Глобальные статические константы и базовые настройки проекта.
 """
@@ -87,7 +85,7 @@ ALL_CANDIDATE_LOCATIONS = {
         "type": "POKUPKA_BTS",
         "lat": 56.01,
         "lon": 37.10,
-        "area_offered_sqm": 20000,
+        "area_offered_sqm": 17500,
         "cost_metric_base": 1_500_000_000, # общая стоимость
         "current_class": "A_requires_mod"
     },

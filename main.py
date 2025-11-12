@@ -1,9 +1,3 @@
-# main.py
-
-"""
-Главный исполняемый файл.
-Оркестрирует полный цикл анализа релокации склада: от сбора данных до расчета ROI.
-"""
 from typing import Dict, Any, List, Optional
 import math
 
