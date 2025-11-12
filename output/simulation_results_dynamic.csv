@@ -1,0 +1,5 @@
+Location_Name;Scenario_Name;Staff_Required;Achieved_Throughput_Monthly;Avg_Cycle_Time_Min;Total_Annual_OPEX_RUB;Total_CAPEX_RUB;Payback_Period_Years
+PNK Чашниково BTS;1. Move No Mitigation;75;10000;15;333096995;1100000000;
+PNK Чашниково BTS;2. Move With Compensation;85;10000;15;345696995;1150000000;
+PNK Чашниково BTS;3. Move Basic Automation;75;10000;12;333096995;1200000000;
+PNK Чашниково BTS;4. Move Advanced Automation;75;10000;10;333096995;1400000000;
