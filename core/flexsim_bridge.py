@@ -49,10 +49,8 @@ class FlexSimAPIBridge:
     def generate_json_config(self, location_spec: LocationSpec, scenario_result: ScenarioResult, scenario_data: dict):
         """Создает и сохраняет JSON-конфигурацию для одного сценария."""
 
-        # Создаем экземпляр FleetOptimizer для расчетов
         fleet_optimizer = FleetOptimizer()
 
-        # Определяем тип автоматизации на основе инвестиций
         automation_investment = scenario_data.get('automation_investment', 0)
         automation_type = "None"
         if automation_investment == 100_000_000:
@@ -89,7 +87,6 @@ class FlexSimAPIBridge:
             }
         }
         
-        # Формируем имя файла на основе имени сценария
         scenario_name = scenario_data.get('name', 'Unknown_Scenario')
         safe_scenario_name = scenario_name.replace('. ', '_').replace(' ', '_')
         filename = f"flexsim_setup_{safe_scenario_name}.json"
@@ -99,7 +96,6 @@ class FlexSimAPIBridge:
             json.dump(config_data, f, ensure_ascii=False, indent=4)
         print(f"  > [OK] JSON-конфиг сохранен: {filename}")
         
-        # Демонстрация для Сценария 4
         if "4_Move_Advanced_Automation" in safe_scenario_name:
             print("\n--- Демонстрация JSON для Сценария 4 ---")
             print(json.dumps(config_data, ensure_ascii=False, indent=4))

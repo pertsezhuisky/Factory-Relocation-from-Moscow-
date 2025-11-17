@@ -17,6 +17,7 @@ from model_validation import run_full_validation
 from formula_visualizer import visualizer
 
 
+
 def generate_detailed_relocation_plan(location_data: Dict[str, Any], z_pers_s1: float,
                                      fleet_summary: Optional[Dict[str, Any]] = None,
                                      dock_requirements: Optional[Dict[str, Any]] = None):

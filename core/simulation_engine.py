@@ -23,10 +23,8 @@ class WarehouseSimulator:
         self.staff_count = staff_count
         self.efficiency_multiplier = efficiency_multiplier
 
-        # Операторы как ресурс SimPy
         self.operators = simpy.Resource(self.env, capacity=staff_count)
 
-        # Статистика
         self.processed_orders_count = 0
         self.total_cycle_time_min = 0.0
 
@@ -45,11 +43,9 @@ class WarehouseSimulator:
         """Процесс обработки одного заказа."""
         arrival_time = self.env.now
 
-        # Запрашиваем оператора
         with self.operators.request() as operator_request:
             yield operator_request
 
-            # Базовое время обработки
             base_processing_time = config.BASE_ORDER_CYCLE_TIME_MIN
 
             # Применяем множитель эффективности (автоматизация уменьшает время)
@@ -58,10 +54,8 @@ class WarehouseSimulator:
             # Добавляем вариативность ±15%
             actual_processing_time *= random.uniform(0.85, 1.15)
 
-            # Обработка заказа
             yield self.env.timeout(actual_processing_time)
 
-            # Обновляем статистику
             cycle_time = self.env.now - arrival_time
             self.total_cycle_time_min += cycle_time
             self.processed_orders_count += 1
@@ -109,11 +103,9 @@ class EnhancedWarehouseSimulator(WarehouseSimulator):
         self.enable_dock_simulation = enable_dock_simulation
 
         if enable_dock_simulation:
-            # Доки как ресурсы SimPy
             self.inbound_docks = simpy.Resource(self.env, capacity=inbound_docks)
             self.outbound_docks = simpy.Resource(self.env, capacity=outbound_docks)
 
-            # Статистика доков
             self.inbound_trucks_served = 0
             self.outbound_trucks_served = 0
             self.total_inbound_wait_time_min = 0.0
@@ -121,7 +113,6 @@ class EnhancedWarehouseSimulator(WarehouseSimulator):
             self.inbound_wait_times: List[float] = []
             self.outbound_wait_times: List[float] = []
 
-            # Запускаем генераторы грузовиков
             self.env.process(self._inbound_truck_generator())
             self.env.process(self._outbound_truck_generator())
 
@@ -184,10 +175,8 @@ class EnhancedWarehouseSimulator(WarehouseSimulator):
     def run(self) -> Dict[str, float]:
         """Запускает расширенную симуляцию и возвращает KPI."""
 
-        # Запускаем генератор заказов
         self.env.process(self._order_generator())
 
-        # Задаем общую длительность симуляции
         simulation_duration = config.SIMULATION_WORKING_DAYS * config.MINUTES_PER_WORKING_DAY
         self.env.run(until=simulation_duration * 1.5)
 
@@ -199,7 +188,6 @@ class EnhancedWarehouseSimulator(WarehouseSimulator):
             "avg_cycle_time_min": round(avg_cycle_time, 2)
         }
 
-        # Добавляем метрики доков
         if self.enable_dock_simulation:
             avg_inbound_wait = self.total_inbound_wait_time_min / self.inbound_trucks_served if self.inbound_trucks_served > 0 else 0
             avg_outbound_wait = self.total_outbound_wait_time_min / self.outbound_trucks_served if self.outbound_trucks_served > 0 else 0

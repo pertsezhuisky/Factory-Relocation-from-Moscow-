@@ -29,18 +29,18 @@ class AvitoParserStub:
         scored_locations = []
         
         for key, loc in candidate_locations.items():
-            # 2.1 Фильтрация по площади
+            # Фильтрация по площади
             if loc['area_offered_sqm'] < self.REQUIRED_TOTAL_AREA:
                 continue
 
-            # 2.2 Расчет CAPEX
+            # Расчет CAPEX
             total_initial_capex = self.CAPEX_FIXED_EQUIPMENT + self.CAPEX_GPP_GDP_CLIMATE
 
-            # 2.3 Условная модификация
+            # Условная модификация
             if loc['current_class'] == 'A_requires_mod':
                 total_initial_capex += self.CAPEX_MODIFICATION_IF_NEEDED
 
-            # 2.4 Расчет OPEX (помещение) и добавление стоимости покупки в CAPEX
+            # Расчет OPEX (помещение) и добавление стоимости покупки в CAPEX
             annual_building_opex = 0
             if loc['type'] == 'ARENDA':
                 annual_building_opex = loc['cost_metric_base'] * loc['area_offered_sqm']
@@ -65,9 +65,8 @@ class AvitoParserStub:
         return scored_locations
 
 
-# ============================================================================
-# ПРОМПТ 1: Полный Парсер Авито/ЦИАН (Класс AvitoCIANScraper)
-# ============================================================================
+# Полный Парсер Авито/ЦИАН (Класс AvitoCIANScraper)
+
 
 class AvitoCIANScraper:
     """
@@ -94,12 +93,10 @@ class AvitoCIANScraper:
         Имитирует реальный HTTP-запрос к API Авито/ЦИАН для получения списка объектов.
 
         В реальной реализации здесь был бы код:
-        -----------------------------------------------
         response = requests.get(search_url, headers=self.session_headers, timeout=30)
         if response.status_code == 200:
             raw_json = response.json()
             return raw_json['offers']
-        -----------------------------------------------
 
         Args:
             search_url: URL для поиска складов (в stub-режиме игнорируется)
@@ -124,13 +121,11 @@ class AvitoCIANScraper:
         Имитирует парсинг HTML/JSON с использованием BeautifulSoup и фильтрацию по требованиям.
 
         В реальной реализации здесь был бы код:
-        -----------------------------------------------
         soup = BeautifulSoup(html_content, 'html.parser')
         for offer_block in soup.find_all('div', class_='offer-card'):
             title = offer_block.find('h3', class_='title').text
             area = float(offer_block.find('span', class_='area').text.replace(' м²', ''))
             ...
-        -----------------------------------------------
 
         Args:
             raw_data: Сырые данные от API
@@ -145,12 +140,11 @@ class AvitoCIANScraper:
             # Имитация извлечения данных из HTML (в реальности через BeautifulSoup)
             print(f"    - Обработка: '{loc['name']}'")
 
-            # ====== ФИЛЬТРАЦИЯ ПО ПЛОЩАДИ ======
             if loc['area_offered_sqm'] < self.REQUIRED_TOTAL_AREA:
                 print(f"      [SKIP] Площадь {loc['area_offered_sqm']} кв.м < требуемых {self.REQUIRED_TOTAL_AREA} кв.м")
                 continue
 
-            # ====== РАСЧЕТ CAPEX GPP/GDP ======
+            # Расчет CAPEX GPP/GDP 
             # Базовый CAPEX всегда включает:
             # 1. Стеллажное оборудование (50 млн)
             # 2. Климатические системы GPP/GDP (250 млн)
@@ -161,7 +155,7 @@ class AvitoCIANScraper:
                 total_initial_capex += self.CAPEX_MODIFICATION_IF_NEEDED
                 print(f"      [CAPEX] +{self.CAPEX_MODIFICATION_IF_NEEDED:,} руб. на модификацию до класса А")
 
-            # ====== РАСЧЕТ OPEX (ПОМЕЩЕНИЕ) ======
+            # Расчет OPEX (помещение)
             annual_building_opex = 0
 
             if loc['type'] == 'ARENDA':
@@ -180,7 +174,7 @@ class AvitoCIANScraper:
                 annual_building_opex = (notional_rent_rate * loc['area_offered_sqm']) * 0.05
                 print(f"      [OPEX] Обслуживание (5%): {annual_building_opex:,.0f} руб/год")
 
-            # ====== ФОРМИРОВАНИЕ РЕЗУЛЬТАТА ======
+            # Формирование результата
             scored_locations.append({
                 "location_name": loc['name'],
                 "lat": loc['lat'],
@@ -197,10 +191,7 @@ class AvitoCIANScraper:
         print(f"\n  > [PARSER] Фильтрация завершена. Подходящих локаций: {len(scored_locations)}")
         return scored_locations
 
-
-# ============================================================================
-# ПРОМПТ 2: Бесплатный роутер на OSRM (Класс OSRMGeoRouter)
-# ============================================================================
+# Бесплатный роутер на OSRM (Класс OSRMGeoRouter)
 
 class OSRMGeoRouter:
     """
@@ -214,7 +205,7 @@ class OSRMGeoRouter:
 
     def __init__(self, use_geocoding: bool = False):
         self.use_geocoding = use_geocoding
-        # ИЗМЕНЕНИЕ: Добавляем атрибут geolocator в любом случае, но инициализируем его как None
+        # Добавляем атрибут geolocator в любом случае, но инициализируем его как None
         self.geolocator: Optional[Nominatim] = None
         if use_geocoding:
             self.geolocator = Nominatim(user_agent="warehouse_relocation_analyzer/1.0")
@@ -243,7 +234,7 @@ class OSRMGeoRouter:
             location = self.geolocator.geocode(address, timeout=10)
             self.last_request_time = time.time()
 
-            # Явная проверка на наличие атрибутов, чтобы Pylance был уверен в их существовании
+            # проверка на наличие атрибутов, чтобы Pylance был уверен в их существовании
             if location and hasattr(location, 'latitude') and hasattr(location, 'longitude'):
                 coords = (location.latitude, location.longitude)
                 self.geocode_cache[address] = coords
@@ -251,7 +242,7 @@ class OSRMGeoRouter:
                 return coords
             else:
                 print(f"  > [Nominatim] Адрес не найден: '{address}'")
-                self.geocode_cache[address] = None # Также кэшируем неудачный результат
+                self.geocode_cache[address] = None # кэшируем неудачный результат
                 return None
 
         except Exception as e:
@@ -333,10 +324,7 @@ class OSRMGeoRouter:
         print(f"  > Итоговое взвешенное расстояние: {total_weighted_distance:.1f} км")
         return results
 
-
-# ============================================================================
 # СТАРЫЙ КЛАСС (для обратной совместимости, удалить после миграции)
-# ============================================================================
 class YandexGeoRouter:
     """
     Имитация API Яндекс.Карт для получения точных дорожных расстояний и времени в пути.
@@ -374,7 +362,6 @@ class YandexGeoRouter:
         Имитирует HTTP-запрос к API Матрицы расстояний Яндекс.Карт.
 
         В реальной реализации здесь был бы код:
-        -----------------------------------------------
         url = f"https://api.routing.yandex.net/v2/route"
         params = {
             'apikey': self.api_key,
@@ -387,7 +374,6 @@ class YandexGeoRouter:
             'route_distance_km': route_data['route']['distance'] / 1000,
             'travel_time_h': route_data['route']['duration'] / 3600
         }
-        -----------------------------------------------
 
         Args:
             start_coords: Координаты начальной точки (lat, lon)
@@ -399,7 +385,7 @@ class YandexGeoRouter:
         """
         # print(f"  > [API Яндекс.Карт] Запрос маршрута: {start_coords} -> {end_coords}")
 
-        # ====== РАСЧЕТ S (ДОРОЖНОЕ ПЛЕЧО) ======
+        # Расчет S (дорожное плечо)
         # Формула Евклидова расстояния с поправкой на реальность дорог
         lat1, lon1 = start_coords
         lat2, lon2 = end_coords
@@ -413,7 +399,7 @@ class YandexGeoRouter:
         # Коэффициент 1.3 - поправка на кривизну дорог
         route_distance_km = euclidean_dist_deg * 111 * 1.3
 
-        # ====== РАСЧЕТ T (ВРЕМЯ В ПУТИ) ======
+        # Расчет T (время в пути)
         # Средняя скорость для грузового транспорта: 50 км/ч
         avg_speed_kmh = 50
         travel_time_h = route_distance_km / avg_speed_kmh
@@ -521,7 +507,6 @@ class FleetOptimizer:
         # Затраты на Авиа (доставка в SVO)
         cost_svo = (annual_orders * self.AIR_DELIVERY_SHARE) * avg_dist_svo * self.OWN_FLEET_TARIFF_RUB_KM
 
-        # <--- ИЗМЕНЕННАЯ ЛОГИКА --->
         # Затраты на местные перевозки (наемный транспорт)
         # Используем новый повышенный тариф из config.py для учета ограничений в Москве
         cost_local = (annual_orders * self.LOCAL_DELIVERY_SHARE) * avg_dist_local * config.MOSCOW_DELIVERY_TARIFF_RUB_PER_KM
@@ -540,9 +525,7 @@ class FleetOptimizer:
 
         return total_cost
 
-    # ============================================================================
-    # ПРОМПТ 3: Интеграция и оптимизация - новые методы FleetOptimizer
-    # ============================================================================
+    # ПРОМПТ 3: Интеграция и оптимизация - новые методы FleetOptimizer 
 
     def calculate_optimal_fleet_and_cost(self, location_data: dict, geo_router: OSRMGeoRouter) -> dict:
         """
@@ -566,7 +549,6 @@ class FleetOptimizer:
         dist_svo = route_data['SVO']['distance_km']
         dist_lpu = route_data['LPU']['distance_km']
 
-        # <--- ИЗМЕНЕННАЯ ЛОГИКА --->
         # Рассчитываем годовые транспортные расходы (T_год) используя обновленный метод
         total_annual_transport_cost = self.calculate_annual_transport_cost(dist_cfo, dist_svo, dist_lpu)
         
@@ -695,7 +677,7 @@ def plot_results():
     print(df.to_string(index=False))
     print("="*80 + "\n")
 
-    # --- Настройка визуализации ---
+    # Настройка визуализации 
     sns.set_theme(style="whitegrid")
     # Создаем фигуру с двумя осями Y для отображения данных разного масштаба
     fig, ax1 = plt.subplots(figsize=(13, 8))

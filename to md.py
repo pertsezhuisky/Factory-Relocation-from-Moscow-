@@ -49,7 +49,6 @@ def collect_code_files_to_markdown(output_file, extensions, extra_dirs=None):
                             out_file.write(f"<!-- Error reading file: {e} -->\n")
                         out_file.write("\n```\n\n")
 
-# --- Основной код ---
 output_markdown = 'collected_code.md'
 file_extensions = ['.py', '.js', '.html', '.css', '.ts', '.jsx', '.json', '.md']
 

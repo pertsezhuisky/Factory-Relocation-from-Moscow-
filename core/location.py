@@ -1,5 +1,3 @@
-# core/location.py
-
 """
 Модуль для конфигурации склада и расчета базовых финансовых показателей (CAPEX, OPEX).
 """
@@ -13,7 +11,6 @@ class WarehouseConfigurator:
     Рассчитывает базовые CAPEX и OPEX для склада, включая затраты на помещение и оборудование.
     """
     def __init__(self, ownership_type: str, rent_rate_sqm_year: float, purchase_cost: float, lat: float, lon: float):
-        # Нормализуем тип владения: POKUPKA_BTS -> POKUPKA
         if ownership_type == "POKUPKA_BTS":
             ownership_type = "POKUPKA"
 
@@ -59,7 +56,7 @@ class WarehouseConfigurator:
         """Рассчитывает годовое ИЗМЕНЕНИЕ транспортных расходов при переезде."""
         total_dist_increase_km = 0
         new_hub_coords = (self.lat, self.lon)
-        # Ключевые точки доставки: аэропорт и усредненные центры для ЦФО и Москвы
+        # Ключевые точки доставки
         key_points = [
             config.KEY_GEO_POINTS["Airport_SVO"],
             config.KEY_GEO_POINTS["CFD_HUBs_Avg"],

@@ -168,8 +168,7 @@ class DetailedFleetPlanner:
                       'insurance_rub': insurance_cost, 'total_opex_rub': fuel_cost + maintenance_cost + driver_cost + insurance_cost},
             'capex_purchase_rub': purchase_capex, 'opex_lease_rub': lease_opex_annual
         }
-        
-    # <--- ПОЛНОСТЬЮ ПЕРЕПИСАННЫЙ МЕТОД --->
+
     def _calculate_local_fleet(self, avg_distance_km: float) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Расчет флота для местных ЛПУ Москвы, разделенного на 2 части:
@@ -303,7 +302,6 @@ class DetailedFleetPlanner:
             'capex_purchase_rub': purchase_capex, 'opex_lease_rub': lease_opex_annual
         }
 
-    # ... (Остальные методы класса без изменений) ...
     def _aggregate_fleet_costs(self, *fleet_data) -> Dict[str, Any]:
         """Агрегирует данные по всему флоту."""
         total_vehicles = sum(f['required_count'] for f in fleet_data)

@@ -1,11 +1,9 @@
-# config.py
-
 """
 Глобальные статические константы и базовые настройки проекта.
 """
 
 # --- Финансовые и HR константы ---
-INITIAL_STAFF_COUNT = 100
+INITIAL_STAFF_COUNT = 240
 OPERATOR_SALARY_RUB_MONTH = 105000
 TRANSPORT_TARIFF_RUB_PER_KM = 13.4  # Средний тариф для 18-20т фуры
 TRANSPORT_MAINTENANCE_RATE = 0.15  # 15% на техническое обслуживание транспорта
@@ -214,13 +212,22 @@ ALL_CANDIDATE_LOCATIONS = {
         "cost_metric_base": 10000.0, # руб/м²/год
         "current_class": "A_verified"
     },
-    "pnk_chashnikovo": {
-        "name": "PNK Чашниково BTS",
+    "pnk_chashnikovo_lease": {
+        "name": "PNK Чашниково (аренда)",
+        "type": "ARENDA",
+        "lat": 56.01,
+        "lon": 37.10,
+        "area_offered_sqm": 17500,
+        "cost_metric_base": 12500.0,  # руб/м²/год за складскую площадь
+        "current_class": "A_requires_mod"
+    },
+    "pnk_chashnikovo_bts": {
+        "name": "PNK Чашниково (покупка BTS)",
         "type": "POKUPKA_BTS",
         "lat": 56.01,
         "lon": 37.10,
-        "area_offered_sqm": 20000,
-        "cost_metric_base": 1_500_000_000, # общая стоимость
+        "area_offered_sqm": 17500,
+        "cost_metric_base": 1_500_000_000,  # полная стоимость покупки, руб.
         "current_class": "A_requires_mod"
     },
     "esipovo_bts": {
